@@ -1,0 +1,31 @@
+# Biblioteca para instalar: pip install folium | pip install geopandas
+
+
+import geopandas as gpd
+import folium
+
+# carregar shapefile | vou deixar em anexo os bairros
+bairros_br = gpd.read_file(
+    r"C:\DSA\FundamentosPython\Cap04\bairros_municipios_brasil\BR_bairros_CD2022\BR_bairros_CD2022.shp"
+)
+
+# filtrar Blumenau
+blumenau_bairros = bairros_br[
+    (bairros_br["NM_UF"] == "Santa Catarina") &
+    (bairros_br["NM_MUN"] == "Blumenau")
+]
+
+# converter para WGS84 (latitude/longitude), necessário para folium
+blumenau_bairros = blumenau_bairros.to_crs(epsg=4326)
+
+# centralizar o mapa no centro de Blumenau
+centro = [blumenau_bairros.geometry.centroid.y.mean(),
+          blumenau_bairros.geometry.centroid.x.mean()]
+
+m = folium.Map(location=centro, zoom_start=12, tiles="OpenStreetMap")
+
+# adicionar bairros
+folium.GeoJson(blumenau_bairros).add_to(m)
+
+# mostrar mapa interativo
+m
