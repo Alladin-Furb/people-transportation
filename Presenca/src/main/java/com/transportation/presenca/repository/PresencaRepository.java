@@ -41,16 +41,9 @@ public interface PresencaRepository extends JpaRepository<Presenca, Long> {
     // Listar presenças de uma data específica
     List<Presenca> findByDataPresenca(LocalDate dataPresenca);
     
-    // Listar presenças de uma data específica e disciplina
-    List<Presenca> findByDataPresencaAndDisciplinaId(LocalDate dataPresenca, Long disciplinaId);
-    
     // Listar presenças não justificadas de um aluno
     @Query("SELECT p FROM Presenca p WHERE p.alunoId = :alunoId AND p.justificado = false AND p.status IN ('AUSENTE', 'FALTA_NAO_JUSTIFICADA') ORDER BY p.dataPresenca DESC")
     List<Presenca> findFaltasNaoJustificadas(@Param("alunoId") Long alunoId);
-    
-    // Calcular frequência de um aluno em uma disciplina
-    @Query("SELECT CAST(COUNT(CASE WHEN p.status = 'PRESENTE' OR p.status = 'ATRASADO' THEN 1 END) * 100.0 / COUNT(p) AS INTEGER) FROM Presenca p WHERE p.alunoId = :alunoId AND p.disciplinaId = :disciplinaId")
-    Integer calculateFrequencia(@Param("alunoId") Long alunoId, @Param("disciplinaId") Long disciplinaId);
     
     // Listar presenças com status específico
     List<Presenca> findByStatusAndDataPresenca(StatusPresenca status, LocalDate dataPresenca);

@@ -28,10 +28,7 @@ public class AlunoController {
 
     @PutMapping("/{id}/presenca")
     public Aluno atualizarPresenca(@PathVariable Long id, @RequestParam boolean presente) {
-        Aluno aluno = service.listar().stream()
-                .filter(a -> a.getId().equals(id))
-                .findFirst()
-                .orElseThrow();
+        Aluno aluno = service.buscarPorId(id);
         aluno.setConfirmouPresenca(presente);
         return service.salvar(aluno);
     }

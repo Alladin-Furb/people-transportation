@@ -152,7 +152,7 @@ public class CursoService {
                 .campus(curso.getCampus())
                 .cargaHoraria(curso.getCargaHoraria())
                 .periodo(curso.getPeriodo())
-                .ativa(curso.getAtivo())
+                .ativo(curso.getAtivo())
                 .criadoEm(curso.getCriadoEm())
                 .atualizadoEm(curso.getAtualizadoEm())
                 .build();

@@ -4,7 +4,6 @@ import com.transportation.presenca.dto.PresencaDTO;
 import com.transportation.presenca.model.Presenca;
 import com.transportation.presenca.model.StatusPresenca;
 import com.transportation.presenca.repository.AlunoRepository;
-import com.transportation.presenca.repository.DisciplinaRepository;
 import com.transportation.presenca.repository.PresencaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,9 +29,6 @@ public class PresencaServiceTest {
     @Mock
     private AlunoRepository alunoRepository;
     
-    @Mock
-    private DisciplinaRepository disciplinaRepository;
-    
     @InjectMocks
     private PresencaService presencaService;
     
@@ -46,8 +42,7 @@ public class PresencaServiceTest {
         // Arrange
         Presenca presenca = new Presenca();
         presenca.setId(1L);
-        presenca.setAlunoId(1L);
-        presenca.setDisciplinaId(1L);
+        presenca.setAlunoId(1L); 
         presenca.setStatus(StatusPresenca.PRESENTE);
         
         when(presencaRepository.findById(1L)).thenReturn(Optional.of(presenca));

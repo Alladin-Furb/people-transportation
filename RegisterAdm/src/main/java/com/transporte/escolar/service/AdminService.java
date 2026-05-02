@@ -1,5 +1,6 @@
 package com.transporte.escolar.service;
 
+import com.transporte.escolar.config.AlunoEventProducer;
 import com.transporte.escolar.model.Aluno;
 import com.transporte.escolar.model.Motorista;
 import com.transporte.escolar.model.Veiculo;
@@ -16,25 +17,33 @@ public class AdminService {
     private final AlunoRepository alunoRepository;
     private final MotoristaRepository motoristaRepository;
     private final VeiculoRepository veiculoRepository;
+    private final AlunoEventProducer alunoEventProducer;
 
     public AdminService(AlunoRepository alunoRepository,
                         MotoristaRepository motoristaRepository,
-                        VeiculoRepository veiculoRepository) {
+                        VeiculoRepository veiculoRepository,
+                        AlunoEventProducer alunoEventProducer) {
         this.alunoRepository = alunoRepository;
         this.motoristaRepository = motoristaRepository;
         this.veiculoRepository = veiculoRepository;
+        this.alunoEventProducer = alunoEventProducer;
     }
 
-    // Alunos
     public Aluno salvarAluno(Aluno aluno) {
-        return alunoRepository.save(aluno);
+        boolean isNovo = aluno.getId() == null;
+        Aluno salvo = alunoRepository.save(aluno);
+        if (isNovo) {
+            alunoEventProducer.publicarAlunoCadastrado(salvo);
+        } else {
+            alunoEventProducer.publicarAlunoAtualizado(salvo);
+        }
+        return salvo;
     }
 
     public List<Aluno> listarAlunos() {
         return alunoRepository.findAll();
     }
 
-    // Motoristas
     public Motorista salvarMotorista(Motorista motorista) {
         return motoristaRepository.save(motorista);
     }
@@ -43,7 +52,6 @@ public class AdminService {
         return motoristaRepository.findAll();
     }
 
-    // Veículos
     public Veiculo salvarVeiculo(Veiculo veiculo) {
         return veiculoRepository.save(veiculo);
     }

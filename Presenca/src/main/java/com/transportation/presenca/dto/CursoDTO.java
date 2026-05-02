@@ -29,7 +29,7 @@ public class CursoDTO {
     
     private String periodo;
     
-    private Boolean ativa;
+    private Boolean ativo;
     
     private LocalDateTime criadoEm;
     

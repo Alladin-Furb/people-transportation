@@ -34,10 +34,7 @@ public class VeiculoController {
     // Atualizar capacidade (opcional, se precisar para o trabalho)
     @PutMapping("/{id}/capacidade")
     public Veiculo atualizarCapacidade(@PathVariable Long id, @RequestParam int capacidade) {
-        Veiculo v = service.listar().stream()
-                        .filter(veic -> veic.getId().equals(id))
-                        .findFirst()
-                        .orElseThrow();
+        Veiculo v = service.buscarPorId(id);
         v.setCapacidade(capacidade);
         return service.salvar(v);
     }

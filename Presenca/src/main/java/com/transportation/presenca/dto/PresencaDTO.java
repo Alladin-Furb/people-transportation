@@ -39,7 +39,7 @@ public class PresencaDTO {
     
     private LocalDateTime horaSaida;
     
-    private String motivoFalda;
+    private String motivoFalta;
     
     private String justificativa;
     

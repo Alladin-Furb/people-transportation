@@ -57,8 +57,8 @@ public class Presenca {
     @Column(name = "hora_saida")
     private LocalDateTime horaSaida;
     
-    @Column(name = "motivo_falda")
-    private String motivoFalda;
+    @Column(name = "motivo_falta")
+    private String motivoFalta;
     
     @Column(name = "justificativa", length = 500)
     private String justificativa;
@@ -72,7 +72,7 @@ public class Presenca {
     @Column(name = "horas_aula_total")
     private Integer horasAulaTotal;
     
-    @Column(name = "professsor_id")
+    @Column(name = "professor_id")
     private Long professorId;
     
     @Column(name = "professor_nome")
