@@ -2,8 +2,6 @@ server:
   port: 8080
 
 spring:
-  application:
-    name: api-gateway
   cloud:
     gateway:
       routes:
@@ -11,6 +9,7 @@ spring:
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
           predicates:
             - Path=/api/auth/**
+
         - id: presenca-service
           uri: ${PRESENCA_SERVICE_URL:http://presenca-service:8082}
           predicates:
@@ -20,7 +19,7 @@ spring:
           uri: ${REGISTER_ADM_SERVICE_URL:http://register-adm-service:8084}
           predicates:
             - Path=/admin/**,/alunos/**,/motoristas/**,/veiculos/**,/eleicao/**
-        
+
         - id: relatorio-service
           uri: ${RELATORIO_SERVICE_URL:http://relatorio-service:8083}
           predicates:

@@ -81,7 +81,7 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${PRESENCA_DB_USER}"]
+      test: ["CMD", "pg_isready", "-U", "${PRESENCA_DB_USER}", "-d", "${PRESENCA_DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -136,7 +136,7 @@ services:
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "${RELATORIO_DB_USER}"]
+      test: ["CMD", "pg_isready", "-U", "${RELATORIO_DB_USER}", "-d", "${RELATORIO_DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
