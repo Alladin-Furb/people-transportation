@@ -3,6 +3,7 @@ package com.transportation.presenca.config;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import com.transportation.presenca.dto.PresencaEventDto;
 import com.transportation.presenca.model.Presenca;
 
 import lombok.RequiredArgsConstructor;
@@ -16,15 +17,18 @@ public class PresencaEventProducer {
     private final RabbitTemplate rabbitTemplate;
 
     public void publicarPresencaRegistrada(Presenca presenca) {
-    try {
-        log.info("Publicando presenca.registrada para aluno {}", presenca.getAlunoId());
+        var dto = new PresencaEventDto(
+            presenca.getId(),
+            presenca.getAlunoId(),
+            presenca.getAlunoNome(),
+            presenca.getDataPresenca().toString(),
+            presenca.getStatus().name()
+        );
         rabbitTemplate.convertAndSend(
             RabbitMQConfig.PRESENCA_EXCHANGE,
             RabbitMQConfig.PRESENCA_REGISTRADA_ROUTING_KEY,
-            presenca
+            dto
         );
-    } catch (Exception e) {
-        log.warn("Falha ao publicar evento de presenca: {}", e.getMessage());
+        log.info("Evento presenca.registrada publicado para aluno {}", presenca.getAlunoId());
     }
-}
 }
