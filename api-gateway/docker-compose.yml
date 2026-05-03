@@ -1,0 +1,160 @@
+services:
+  mariadb:
+    image: mariadb:11.2
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: auth-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
+    networks:
+      - backend
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8081
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - auth-service
+
+  presenca-db:
+    image: postgres:17
+    container_name: presenca-db
+    environment:
+      POSTGRES_DB: ${PRESENCA_DB_NAME}
+      POSTGRES_USER: ${PRESENCA_DB_USER}
+      POSTGRES_PASSWORD: ${PRESENCA_DB_PASSWORD}
+    volumes:
+      - presenca-db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${PRESENCA_DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  register-adm-service:
+    build:
+      context: ./register-adm-service
+      dockerfile: Dockerfile
+    container_name: register-adm-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    networks:
+      - backend
+    depends_on:
+      - rabbitmq
+  presenca-service:
+    build:
+      context: ./presenca-service
+      dockerfile: Dockerfile
+    container_name: presenca-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://presenca-db:5432/${PRESENCA_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${PRESENCA_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${PRESENCA_DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: prod
+    networks:
+      - backend
+    depends_on:
+      presenca-db:
+        condition: service_healthy
+
+  relatorio-db:
+    image: postgres:17
+    container_name: relatorio-db
+    environment:
+      POSTGRES_DB: ${RELATORIO_DB_NAME}
+      POSTGRES_USER: ${RELATORIO_DB_USER}
+      POSTGRES_PASSWORD: ${RELATORIO_DB_PASSWORD}
+    volumes:
+      - relatorio-db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${RELATORIO_DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  relatorio-service:
+    build:
+      context: ./relatorio-service
+      dockerfile: Dockerfile
+    container_name: relatorio-service
+    environment:
+      ConnectionStrings__RelatoriosDb: Host=relatorio-db;Port=5432;Database=${RELATORIO_DB_NAME};Username=${RELATORIO_DB_USER};Password=${RELATORIO_DB_PASSWORD}
+      PresencaService__BaseUrl: http://presenca-service:8082
+    networks:
+      - backend
+    depends_on:
+      relatorio-db:
+        condition: service_healthy
+      presenca-service:
+        condition: service_started
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: true
+
+volumes:
+  mariadb-data:
+  presenca-db-data:
+  relatorio-db-data:
+  rabbitmq-data:
