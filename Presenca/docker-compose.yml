@@ -9,10 +9,15 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/presenca_db
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USERNAME=admin
+      - RABBITMQ_PASSWORD=admin123
     ports:
       - "8082:8082"
     depends_on:
       - postgres
+      - rabbitmq
     networks:
       - presenca-network
 
@@ -27,6 +32,18 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - presenca-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: presenca-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
     networks:
       - presenca-network
 

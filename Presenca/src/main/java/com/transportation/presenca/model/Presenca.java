@@ -48,7 +48,7 @@ public class Presenca {
     private LocalDate dataPresenca;
     
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Column(name = "status", nullable = false, length = 25)
     private StatusPresenca status;
     
     @Column(name = "hora_entrada")
