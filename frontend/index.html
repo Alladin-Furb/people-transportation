@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação de Presença</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>🚌 Confirmação de Presença</h1>
+                <p>Transporte Universitário</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Seção de Adicionar Aluno -->
+            <section class="add-student-section">
+                <h2>Adicionar Aluno</h2>
+                <form id="addStudentForm" onsubmit="addStudent(event)">
+                    <input type="text" id="studentName" placeholder="Nome do aluno" required>
+                    <input type="email" id="studentEmail" placeholder="Email" required>
+                    <button type="submit" class="btn-add">Adicionar Aluno</button>
+                </form>
+            </section>
+
+            <!-- Seção de Informações -->
+            <section class="info-section">
+                <div class="info-card">
+                    <h3>Total de Alunos</h3>
+                    <p class="info-value" id="totalStudents">0</p>
+                </div>
+                <div class="info-card">
+                    <h3>Confirmados</h3>
+                    <p class="info-value confirmed" id="confirmedCount">0</p>
+                </div>
+                <div class="info-card">
+                    <h3>Não Confirmados</h3>
+                    <p class="info-value not-confirmed" id="notConfirmedCount">0</p>
+                </div>
+            </section>
+
+            <!-- Tabela de Estudantes -->
+            <section class="students-section">
+                <h2>Lista de Alunos</h2>
+                <div class="table-wrapper">
+                    <table class="students-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            <tr>
+                                <td colspan="4" class="loading">Nenhum aluno adicionado ainda</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Botões de Ação -->
+            <section class="actions-section">
+                <button class="btn-action" onclick="clearAll()">🗑️ Limpar Tudo</button>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Confirmação de Presença</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

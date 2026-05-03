@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Calendário</title>
+    <link rel="stylesheet" href="calendar.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>📅 Calendário Acadêmico</h1>
+            <p>Configure os dias úteis para cada faculdade</p>
+        </header>
+
+        <main class="main-content">
+            <!-- Seção de Controles -->
+            <section class="controls-section">
+                <div class="control-group">
+                    <label for="faculdadeSelect">🏫 Faculdade:</label>
+                    <select id="faculdadeSelect" onchange="loadCalendar()">
+                        <option value="all">✓ Todas as Faculdades</option>
+                        <option value="FURB">FURB</option>
+                        <option value="UFSC">UFSC</option>
+                        <option value="SENAI">SENAI</option>
+                        <option value="Unisosciesc">Unisosciesc</option>
+                        <option value="Uniasselvi">Uniasselvi</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="monthYear">Período:</label>
+                    <input type="month" id="monthYear" onchange="loadCalendar()">
+                </div>
+
+                <button class="btn-today" onclick="goToToday()">Hoje</button>
+            </section>
+
+            <!-- Calendário -->
+            <section class="calendar-section">
+                <div class="calendar-header">
+                    <button class="btn-nav" onclick="previousMonth()">← Anterior</button>
+                    <h2 id="currentMonth"></h2>
+                    <button class="btn-nav" onclick="nextMonth()">Próximo →</button>
+                </div>
+
+                <!-- Dias da Semana -->
+                <div class="calendar-container">
+                    <div class="calendar-weekdays">
+                        <div class="weekday">Dom</div>
+                        <div class="weekday">Seg</div>
+                        <div class="weekday">Ter</div>
+                        <div class="weekday">Qua</div>
+                        <div class="weekday">Qui</div>
+                        <div class="weekday">Sex</div>
+                        <div class="weekday">Sab</div>
+                    </div>
+
+                    <!-- Dias do Calendário -->
+                    <div class="calendar-days" id="calendarDays"></div>
+                </div>
+            </section>
+
+            <!-- Legenda -->
+            <section class="legend-section">
+                <div class="legend-item">
+                    <div class="legend-color padrao-util"></div>
+                    <span>Dia Útil Padrão</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color faculdade-util"></div>
+                    <span>Dia Útil (mesma cor, por faculdade)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color nao-util"></div>
+                    <span>Dia Não-Útil</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color com-excecao"></div>
+                    <span>Com Exceções (faculdades diferentes)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color outro-mes"></div>
+                    <span>Outro Mês</span>
+                </div>
+            </section>
+
+            <!-- Resumo -->
+            <section class="summary-section">
+                <h3>Resumo do Mês</h3>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <label>Dias Úteis:</label>
+                        <p id="totalUtil">0</p>
+                    </div>
+                    <div class="summary-card">
+                        <label>Dias Não-Úteis:</label>
+                        <p id="totalNaoUtil">0</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ações -->
+            <section class="actions-section">
+                <button class="btn-action save" onclick="saveCalendar()">💾 Salvar Alterações</button>
+                <button class="btn-action reset" onclick="resetCalendar()">🔄 Limpar Seleção</button>
+                <button class="btn-action export" onclick="exportData()">📥 Exportar</button>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Calendário Acadêmico</p>
+    </footer>
+
+    <script src="calendar.js"></script>
+</body>
+</html>

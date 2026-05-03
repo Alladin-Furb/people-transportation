@@ -1,0 +1,343 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --success-color: #27ae60;
+    --danger-color: #e74c3c;
+    --light-gray: #ecf0f1;
+    --dark-gray: #34495e;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.header h1 {
+    color: var(--primary-color);
+    font-size: 2em;
+    margin-bottom: 8px;
+}
+
+.header p {
+    color: var(--dark-gray);
+    font-size: 0.95em;
+}
+
+/* Main Content */
+.main-content {
+    background: white;
+    border-radius: 8px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Add Student Section */
+.add-student-section {
+    margin-bottom: 30px;
+    padding-bottom: 25px;
+    border-bottom: 2px solid var(--light-gray);
+}
+
+.add-student-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+#addStudentForm {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#addStudentForm input {
+    flex: 1;
+    min-width: 150px;
+    padding: 10px 12px;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.95em;
+    transition: border-color 0.3s;
+}
+
+#addStudentForm input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+}
+
+.btn-add {
+    padding: 10px 20px;
+    background: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.btn-add:hover {
+    background: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Info Section */
+.info-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.info-card h3 {
+    font-size: 0.85em;
+    margin-bottom: 12px;
+    opacity: 0.9;
+}
+
+.info-value {
+    font-size: 2.2em;
+    font-weight: bold;
+}
+
+.info-value.confirmed {
+    color: #2ecc71;
+}
+
+.info-value.not-confirmed {
+    color: #f39c12;
+}
+
+/* Students Section */
+.students-section {
+    margin-bottom: 25px;
+}
+
+.students-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.3em;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 8px;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.students-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+.students-table thead {
+    background: var(--primary-color);
+    color: white;
+}
+
+.students-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.students-table td {
+    padding: 12px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.students-table tbody tr {
+    transition: background-color 0.3s;
+}
+
+.students-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.students-table tbody tr:nth-child(even) {
+    background-color: #f5f5f5;
+}
+
+.loading {
+    text-align: center;
+    color: #999;
+    font-style: italic;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: 600;
+    text-align: center;
+    min-width: 100px;
+}
+
+.status-badge.pendente {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.presente {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.ausente {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Action Buttons */
+.btn-table {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.3s;
+    margin: 0 3px;
+}
+
+.btn-present {
+    background: var(--success-color);
+    color: white;
+}
+
+.btn-present:hover {
+    background: #229954;
+    transform: translateY(-2px);
+}
+
+.btn-absent {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-absent:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+}
+
+.btn-delete {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-delete:hover {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+/* Actions Section */
+.actions-section {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 2px solid var(--light-gray);
+}
+
+.btn-action {
+    padding: 10px 20px;
+    background: #95a5a6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-action:hover {
+    background: #7f8c8d;
+    transform: translateY(-2px);
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    color: white;
+    padding: 15px;
+    margin-top: 20px;
+    font-size: 0.85em;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .header h1 {
+        font-size: 1.4em;
+    }
+
+    #addStudentForm {
+        flex-direction: column;
+    }
+
+    #addStudentForm input {
+        min-width: 100%;
+    }
+
+    .btn-add {
+        width: 100%;
+    }
+
+    .students-table {
+        font-size: 0.9em;
+    }
+
+    .students-table th,
+    .students-table td {
+        padding: 8px;
+    }
+
+    .btn-table {
+        padding: 4px 6px;
+        font-size: 0.75em;
+        margin: 2px;
+    }
+
+    .info-section {
+        grid-template-columns: 1fr;
+    }
+}
+
