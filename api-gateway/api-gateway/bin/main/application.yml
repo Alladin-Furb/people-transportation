@@ -11,7 +11,7 @@ spring:
           uri: ${AUTH_SERVICE_URL:http://auth-service:8081}
           predicates:
             - Path=/api/auth/**
-                - id: presenca-service
+        - id: presenca-service
           uri: ${PRESENCA_SERVICE_URL:http://presenca-service:8082}
           predicates:
             - Path=/api/v1/**
