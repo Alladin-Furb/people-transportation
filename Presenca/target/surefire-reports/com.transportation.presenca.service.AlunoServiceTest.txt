@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.transportation.presenca.service.AlunoServiceTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.515 s -- in com.transportation.presenca.service.AlunoServiceTest

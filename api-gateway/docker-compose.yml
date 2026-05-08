@@ -63,6 +63,7 @@ services:
     environment:
       AUTH_SERVICE_URL: http://auth-service:8081
       JWT_SECRET: ${JWT_SECRET}
+      SPRING_AUTOCONFIGURE_EXCLUDE: "org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration,org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration"
     networks:
       - frontend
       - backend
@@ -88,7 +89,7 @@ services:
 
   register-adm-service:
     build:
-      context: ../RegisterAdm      
+      context: ../RegisterAdm
       dockerfile: Dockerfile
     container_name: register-adm-service
     environment:
@@ -104,7 +105,7 @@ services:
 
   presenca-service:
     build:
-      context: ../Presenca         
+      context: ../Presenca
       dockerfile: Dockerfile
     container_name: presenca-service
     environment:
@@ -112,7 +113,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${PRESENCA_DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${PRESENCA_DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: prod
-      RABBITMQ_HOST: rabbitmq      
+      RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
@@ -143,13 +144,13 @@ services:
 
   relatorio-service:
     build:
-      context: ../Relatorio/TransporteEscolar.Relatorios     
+      context: ../Relatorio/TransporteEscolar.Relatorios
       dockerfile: Dockerfile
     container_name: relatorio-service
     environment:
       ConnectionStrings__RelatoriosDb: Host=relatorio-db;Port=5432;Database=${RELATORIO_DB_NAME};Username=${RELATORIO_DB_USER};Password=${RELATORIO_DB_PASSWORD}
       PresencaService__BaseUrl: http://presenca-service:8082
-      RabbitMQ__Host: rabbitmq      
+      RabbitMQ__Host: rabbitmq
       RabbitMQ__Port: 5672
       RabbitMQ__Username: ${RABBITMQ_USERNAME}
       RabbitMQ__Password: ${RABBITMQ_PASSWORD}

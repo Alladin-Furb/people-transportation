@@ -31,10 +31,6 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
     private static final String USER_ROLE_HEADER = "X-User-Role";
     private static final String BEARER_PREFIX = "Bearer ";
 
-    private static final Set<String> PUBLIC_PATHS = Set.of(
-            "/api/auth/login",
-            "/api/auth/register"
-    );
 
     private final JwtUtil jwtUtil;
 
@@ -53,7 +49,7 @@ public class AuthenticationFilter implements GlobalFilter, Ordered {
         ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate()
                 .header(CORRELATION_ID_HEADER, correlationId);
 
-        if (PUBLIC_PATHS.contains(path)) {
+        if (path.startsWith("/api/auth/")) {
             return chain.filter(
                     exchange.mutate().request(requestBuilder.build()).build());
         }
