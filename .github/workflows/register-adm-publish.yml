@@ -2,9 +2,10 @@ name: Build and Push RegisterAdm Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - 'RegisterAdm/**'
+  workflow_dispatch:
 
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/register-adm-service
