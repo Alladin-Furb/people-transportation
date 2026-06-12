@@ -28,6 +28,24 @@ pool.on('error', (err) => {
     console.error('❌ Erro na conexão:', err);
 });
 
+async function ensurePresenceTable() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS "PresenceConfirmation" (
+            "Id" SERIAL PRIMARY KEY,
+            "NomeAluno" VARCHAR(255) NOT NULL,
+            "DataConfirmacao" DATE NOT NULL,
+            "TipoDeslocamento" VARCHAR(30) NOT NULL,
+            "LocalEmbarque" VARCHAR(255) NOT NULL,
+            "Latitude" NUMERIC(10, 6),
+            "Longitude" NUMERIC(10, 6),
+            "CreatedAt" TIMESTAMP DEFAULT NOW()
+        )
+    `);
+
+    await pool.query('ALTER TABLE "PresenceConfirmation" ADD COLUMN IF NOT EXISTS "Latitude" NUMERIC(10, 6)');
+    await pool.query('ALTER TABLE "PresenceConfirmation" ADD COLUMN IF NOT EXISTS "Longitude" NUMERIC(10, 6)');
+}
+
 // ==================== ROTAS ====================
 
 // GET / - Health Check
@@ -192,6 +210,54 @@ app.get('/api/empresas', async (req, res) => {
     }
 });
 
+// ==================== CONFIRMAÇÃO DE PRESENÇA ====================
+
+// POST /api/presencas/confirmacao
+// Body: { nomeAluno, dataConfirmacao, tipoDeslocamento, localEmbarque, latitude, longitude }
+app.post('/api/presencas/confirmacao', async (req, res) => {
+    try {
+        const { nomeAluno, dataConfirmacao, tipoDeslocamento, localEmbarque, latitude, longitude } = req.body;
+
+        if (!nomeAluno || !dataConfirmacao || !tipoDeslocamento || !localEmbarque || latitude === undefined || longitude === undefined) {
+            return res.status(400).json({
+                error: 'Campos obrigatórios: nomeAluno, dataConfirmacao, tipoDeslocamento, localEmbarque, latitude, longitude'
+            });
+        }
+
+        const tiposValidos = ['VOU_E_VOLTO', 'APENAS_VOLTO', 'APENAS_VOU'];
+        if (!tiposValidos.includes(tipoDeslocamento)) {
+            return res.status(400).json({
+                error: `tipoDeslocamento inválido. Válidos: ${tiposValidos.join(', ')}`
+            });
+        }
+
+        const lat = Number(latitude);
+        const lng = Number(longitude);
+
+        if (Number.isNaN(lat) || Number.isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            return res.status(400).json({ error: 'Coordenadas inválidas (latitude/longitude).' });
+        }
+
+        const result = await pool.query(
+            `
+                INSERT INTO "PresenceConfirmation"
+                ("NomeAluno", "DataConfirmacao", "TipoDeslocamento", "LocalEmbarque", "Latitude", "Longitude")
+                VALUES ($1, $2, $3, $4, $5, $6)
+                RETURNING "Id", "NomeAluno", "DataConfirmacao", "TipoDeslocamento", "LocalEmbarque", "Latitude", "Longitude", "CreatedAt"
+            `,
+            [nomeAluno.trim(), dataConfirmacao, tipoDeslocamento, localEmbarque.trim(), lat, lng]
+        );
+
+        return res.status(201).json({
+            message: 'Presença confirmada com sucesso',
+            data: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Erro ao registrar confirmação de presença:', error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
 // ==================== ERRO 404 ====================
 
 app.use((req, res) => {
@@ -200,14 +266,25 @@ app.use((req, res) => {
 
 // ==================== INICIAR SERVIDOR ====================
 
-app.listen(PORT, () => {
-    console.log(`
+async function startServer() {
+    try {
+        await ensurePresenceTable();
+
+        app.listen(PORT, () => {
+            console.log(`
 ╔════════════════════════════════════════╗
 ║   Servidor Calendário Acadêmico        ║
 ║   Rodando em: http://localhost:${PORT}       ║
 ║   Banco: ${process.env.DB_NAME}              ║
 ╚════════════════════════════════════════╝
-    `);
-});
+            `);
+        });
+    } catch (error) {
+        console.error('❌ Erro ao inicializar servidor:', error);
+        process.exit(1);
+    }
+}
+
+startServer();
 
 module.exports = app;

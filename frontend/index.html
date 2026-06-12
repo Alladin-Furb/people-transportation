@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirmação de Presença</title>
     <link rel="stylesheet" href="styles.css">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
 </head>
 <body>
     <div class="container">
@@ -16,57 +22,64 @@
         </header>
 
         <main class="main-content">
-            <!-- Seção de Adicionar Aluno -->
-            <section class="add-student-section">
-                <h2>Adicionar Aluno</h2>
-                <form id="addStudentForm" onsubmit="addStudent(event)">
-                    <input type="text" id="studentName" placeholder="Nome do aluno" required>
-                    <input type="email" id="studentEmail" placeholder="Email" required>
-                    <button type="submit" class="btn-add">Adicionar Aluno</button>
+            <section class="confirmation-section">
+                <h2>Iniciar Confirmação</h2>
+                <form id="presenceForm" onsubmit="confirmPresence(event)">
+                    <div class="form-group">
+                        <label for="studentName">Nome do aluno</label>
+                        <input type="text" id="studentName" placeholder="Digite o nome completo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmationDate">Data da confirmação</label>
+                        <input type="date" id="confirmationDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tripType">Tipo de deslocamento</label>
+                        <select id="tripType" required>
+                            <option value="">Selecione uma opção</option>
+                            <option value="VOU_E_VOLTO">Vou e Volto</option>
+                            <option value="APENAS_VOLTO">Apenas Volto</option>
+                            <option value="APENAS_VOU">Apenas Vou</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="boardingLocation">Local de embarque do aluno</label>
+                        <input
+                            type="text"
+                            id="boardingLocation"
+                            placeholder="Ex.: Rua XV de Novembro, 1200 - Centro"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selecione a localização exata no mapa</label>
+                        <div class="search-box">
+                            <input
+                                type="text"
+                                id="addressSearch"
+                                placeholder="Pesquise um endereço..."
+                                class="search-input"
+                            >
+                            <button type="button" id="searchAddressBtn" class="btn-search">Buscar</button>
+                        </div>
+                        <div id="searchResults" class="search-results"></div>
+                        <div class="map-tools">
+                            <button type="button" id="useCurrentLocation" class="btn-map">Usar minha localização</button>
+                            <span id="coordinatesPreview" class="coordinates-preview">Nenhuma coordenada selecionada</span>
+                        </div>
+                        <div id="boardingMap" class="boarding-map"></div>
+                        <input type="hidden" id="latitude" required>
+                        <input type="hidden" id="longitude" required>
+                    </div>
+
+                    <button type="submit" class="btn-confirm">Confirmar Presença</button>
                 </form>
-            </section>
 
-            <!-- Seção de Informações -->
-            <section class="info-section">
-                <div class="info-card">
-                    <h3>Total de Alunos</h3>
-                    <p class="info-value" id="totalStudents">0</p>
-                </div>
-                <div class="info-card">
-                    <h3>Confirmados</h3>
-                    <p class="info-value confirmed" id="confirmedCount">0</p>
-                </div>
-                <div class="info-card">
-                    <h3>Não Confirmados</h3>
-                    <p class="info-value not-confirmed" id="notConfirmedCount">0</p>
-                </div>
-            </section>
-
-            <!-- Tabela de Estudantes -->
-            <section class="students-section">
-                <h2>Lista de Alunos</h2>
-                <div class="table-wrapper">
-                    <table class="students-table">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Email</th>
-                                <th>Status</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentsTableBody">
-                            <tr>
-                                <td colspan="4" class="loading">Nenhum aluno adicionado ainda</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <!-- Botões de Ação -->
-            <section class="actions-section">
-                <button class="btn-action" onclick="clearAll()">🗑️ Limpar Tudo</button>
+                <p id="feedbackMessage" class="feedback-message" aria-live="polite"></p>
             </section>
         </main>
     </div>
@@ -75,6 +88,11 @@
         <p>&copy; 2026 Confirmação de Presença</p>
     </footer>
 
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
     <script src="script.js"></script>
 </body>
 </html>

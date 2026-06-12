@@ -11,9 +11,8 @@
     --danger-color: #e74c3c;
     --light-gray: #ecf0f1;
     --dark-gray: #34495e;
-    --padrao-util: #27ae60;
-    --faculdade-util: #f39c12;
-    --nao-util: #e74c3c;
+    --dia-normal: #27ae60;
+    --stand-by: #95a5a6;
     --outro-mes: #bdc3c7;
 }
 
@@ -218,17 +217,33 @@ body {
     font-weight: bold;
 }
 
-/* Estado: Dia útil padrão (fins de semana não, dias úteis padrão sim) */
-.calendar-day.padrao-util {
+/* Estado: Dia Normal (sem feriado, não é fim de semana) */
+.calendar-day.dia-normal {
     background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
     color: #155724;
     border-color: #28a745;
 }
 
-.calendar-day.padrao-util:hover {
+.calendar-day.dia-normal:hover {
     background: linear-gradient(135deg, #c3e6cb 0%, #b1dfbb 100%);
     border-color: #1e7e34;
 }
+
+/* Estado: Stand By (feriado ou fim de semana) */
+.calendar-day.stand-by {
+    background: linear-gradient(135deg, #e2e3e5 0%, #d1d3d6 100%);
+    color: #6c757d;
+    border-color: #adb5bd;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.calendar-day.stand-by:hover {
+    background: linear-gradient(135deg, #d1d3d6 0%, #c1c3c6 100%);
+    border-color: #999;
+    opacity: 0.8;
+}
+
 
 /* Estado: Dia útil padrão com exceções (algumas faculdades têm feriado diferente) */
 .calendar-day.padrao-util.com-excecao {
@@ -378,6 +393,17 @@ body {
 .legend-color.padrao-util {
     background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
     border-color: #28a745;
+}
+
+.legend-color.dia-normal {
+    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+    border-color: #28a745;
+}
+
+.legend-color.stand-by {
+    background: linear-gradient(135deg, #e2e3e5 0%, #d1d3d6 100%);
+    border-color: #adb5bd;
+    opacity: 0.7;
 }
 
 .legend-color.faculdade-util {

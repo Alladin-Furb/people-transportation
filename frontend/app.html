@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Transporte</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="calendar.css">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
+    <style>
+        :root {
+            --nav-bg: #1f3c5d;
+            --nav-color: #ffffff;
+            --nav-hover: #0f9d58;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .navbar {
+            background: var(--nav-bg);
+            padding: 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .navbar-brand {
+            color: var(--nav-color);
+            font-size: 1.3rem;
+            font-weight: 700;
+            padding: 16px 0;
+        }
+
+        .navbar-menu {
+            display: flex;
+            gap: 8px;
+            list-style: none;
+        }
+
+        .navbar-item {
+            margin: 0;
+        }
+
+        .navbar-link {
+            display: inline-block;
+            color: var(--nav-color);
+            text-decoration: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+        }
+
+        .navbar-link:hover {
+            background: rgba(15, 157, 88, 0.2);
+            color: var(--nav-hover);
+        }
+
+        .navbar-link.active {
+            background: var(--nav-hover);
+            color: white;
+        }
+
+        .screen-container {
+            display: none;
+        }
+
+        .screen-container.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .navbar-brand {
+                width: 100%;
+                text-align: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding: 12px 0;
+            }
+
+            .navbar-menu {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .navbar-link {
+                font-size: 0.9rem;
+                padding: 10px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar de Navegação -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <div class="navbar-brand">🚌 Sistema de Transporte</div>
+            <ul class="navbar-menu">
+                <li class="navbar-item">
+                    <button class="navbar-link active" onclick="switchScreen('presence')" id="presenceNav">
+                        📝 Confirmação de Presença
+                    </button>
+                </li>
+                <li class="navbar-item">
+                    <button class="navbar-link" onclick="switchScreen('calendar')" id="calendarNav">
+                        📅 Calendário
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Tela de Presença -->
+    <div id="presenceScreen" class="screen-container active">
+        <div class="container">
+            <header class="header">
+                <div class="header-content">
+                    <h1>🚌 Confirmação de Presença</h1>
+                    <p>Transporte Universitário</p>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <section class="confirmation-section">
+                    <h2>Iniciar Confirmação</h2>
+                    <form id="presenceForm" onsubmit="confirmPresence(event)">
+                        <div class="form-group">
+                            <label for="studentName">Nome do aluno</label>
+                            <input type="text" id="studentName" placeholder="Digite o nome completo" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirmationDate">Data da confirmação</label>
+                            <input type="date" id="confirmationDate" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tripType">Tipo de deslocamento</label>
+                            <select id="tripType" required>
+                                <option value="">Selecione uma opção</option>
+                                <option value="VOU_E_VOLTO">Vou e Volto</option>
+                                <option value="APENAS_VOLTO">Apenas Volto</option>
+                                <option value="APENAS_VOU">Apenas Vou</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="boardingLocation">Local de embarque do aluno</label>
+                            <input
+                                type="text"
+                                id="boardingLocation"
+                                placeholder="Ex.: Rua XV de Novembro, 1200 - Centro"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label>Selecione a localização exata no mapa</label>
+                            <div class="search-box">
+                                <input
+                                    type="text"
+                                    id="addressSearch"
+                                    placeholder="Pesquise um endereço..."
+                                    class="search-input"
+                                >
+                                <button type="button" id="searchAddressBtn" class="btn-search">Buscar</button>
+                            </div>
+                            <div id="searchResults" class="search-results"></div>
+                            <div class="map-tools">
+                                <button type="button" id="useCurrentLocation" class="btn-map">Usar minha localização</button>
+                                <span id="coordinatesPreview" class="coordinates-preview">Nenhuma coordenada selecionada</span>
+                            </div>
+                            <div id="boardingMap" class="boarding-map"></div>
+                            <input type="hidden" id="latitude" required>
+                            <input type="hidden" id="longitude" required>
+                        </div>
+
+                        <button type="submit" class="btn-confirm">Confirmar Presença</button>
+                    </form>
+
+                    <p id="feedbackMessage" class="feedback-message" aria-live="polite"></p>
+                </section>
+            </main>
+        </div>
+
+        <footer class="footer">
+            <p>&copy; 2026 Confirmação de Presença</p>
+        </footer>
+    </div>
+
+    <!-- Tela de Calendário -->
+    <div id="calendarScreen" class="screen-container">
+        <div class="container">
+            <header class="header">
+                <h1>📅 Calendário Acadêmico</h1>
+                <p>Configure os dias úteis para cada faculdade</p>
+            </header>
+
+            <main class="main-content">
+                <!-- Seção de Controles -->
+                <section class="controls-section">
+                    <div class="control-group">
+                        <label for="faculdadeSelect">🏫 Faculdade:</label>
+                        <select id="faculdadeSelect" onchange="loadCalendar()">
+                            <option value="all">✓ Todas as Faculdades</option>
+                            <option value="FURB">FURB</option>
+                            <option value="UFSC">UFSC</option>
+                            <option value="SENAI">SENAI</option>
+                            <option value="Unisosciesc">Unisosciesc</option>
+                            <option value="Uniasselvi">Uniasselvi</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="monthYear">Período:</label>
+                        <input type="month" id="monthYear" onchange="loadCalendar()">
+                    </div>
+
+                    <button class="btn-today" onclick="goToToday()">Hoje</button>
+                </section>
+
+                <!-- Calendário -->
+                <section class="calendar-section">
+                    <div class="calendar-header">
+                        <button class="btn-nav" onclick="previousMonth()">← Anterior</button>
+                        <h2 id="currentMonth"></h2>
+                        <button class="btn-nav" onclick="nextMonth()">Próximo →</button>
+                    </div>
+
+                    <!-- Dias da Semana -->
+                    <div class="calendar-container">
+                        <div class="calendar-weekdays">
+                            <div class="weekday">Dom</div>
+                            <div class="weekday">Seg</div>
+                            <div class="weekday">Ter</div>
+                            <div class="weekday">Qua</div>
+                            <div class="weekday">Qui</div>
+                            <div class="weekday">Sex</div>
+                            <div class="weekday">Sab</div>
+                        </div>
+
+                        <!-- Dias do Calendário -->
+                        <div class="calendar-days" id="calendarDays"></div>
+                    </div>
+                </section>
+
+                <!-- Legenda -->
+                <section class="legend-section">
+                    <div class="legend-item">
+                        <div class="legend-color dia-normal"></div>
+                        <span>Dia Normal (sem feriado)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color stand-by"></div>
+                        <span>Stand By (feriado ou fim de semana)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color outro-mes"></div>
+                        <span>Outro Mês</span>
+                    </div>
+                </section>
+
+                <!-- Resumo -->
+                <section class="summary-section">
+                    <h3>Resumo do Mês</h3>
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <label>Dias Normais:</label>
+                            <p id="totalNormal">0</p>
+                        </div>
+                        <div class="summary-card">
+                            <label>Stand By:</label>
+                            <p id="totalStandBy">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Ações -->
+                <section class="actions-section">
+                    <button class="btn-action save" onclick="saveCalendar()">💾 Salvar Alterações</button>
+                    <button class="btn-action reset" onclick="resetCalendar()">🔄 Limpar Seleção</button>
+                    <button class="btn-action export" onclick="exportData()">📥 Exportar</button>
+                </section>
+            </main>
+        </div>
+
+        <footer class="footer">
+            <p>&copy; 2026 Calendário Acadêmico</p>
+        </footer>
+    </div>
+
+    <script>
+        function switchScreen(screen) {
+            // Esconder todas as telas
+            document.getElementById('presenceScreen').classList.remove('active');
+            document.getElementById('calendarScreen').classList.remove('active');
+
+            // Remover active de todos os botões
+            document.getElementById('presenceNav').classList.remove('active');
+            document.getElementById('calendarNav').classList.remove('active');
+
+            // Mostrar tela selecionada
+            if (screen === 'presence') {
+                document.getElementById('presenceScreen').classList.add('active');
+                document.getElementById('presenceNav').classList.add('active');
+            } else if (screen === 'calendar') {
+                document.getElementById('calendarScreen').classList.add('active');
+                document.getElementById('calendarNav').classList.add('active');
+            }
+        }
+    </script>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+    <script src="script.js"></script>
+    <script src="calendar.js"></script>
+</body>
+</html>

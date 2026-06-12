@@ -199,44 +199,28 @@ function createDayElement(day, month, year, isOtherMonth) {
     }
 
     let htmlContent = `<span class="calendar-day-number">${day}</span>`;
-    const isDiaUtilPadrao = dayData.DiaUtil === true;
 
     if (selectedFaculdade === 'all') {
-        // Modo "Todas as Faculdades" - mostra padrão com indicadores de feriados específicos
-        const faculdades = ['FURB', 'UFSC', 'SENAI', 'Unisosciesc', 'Uniasselvi'];
-        const faculdadesComFeriado = faculdades.filter(f => dayData[f] === false);
+        // Modo "Todas as Faculdades"
+        const dayOfWeek = dayData.DiaSemana; // 0 = domingo, 6 = sábado
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         
-        // Define cor baseado no padrão
-        if (isDiaUtilPadrao) {
-            element.classList.add('padrao-util');
-            
-            // Se alguma faculdade tem feriado diferente do padrão
-            if (faculdadesComFeriado.length > 0) {
-                element.classList.add('com-excecao');
-                htmlContent += `<span class="calendar-day-icon" title="${faculdadesComFeriado.join(', ')}">${faculdadesComFeriado.length}</span>`;
-            }
+        if (isWeekend) {
+            element.classList.add('stand-by');
         } else {
-            // Dia não-útil no padrão
-            element.classList.add('nao-util');
-            
-            // Se alguma faculdade tem dia útil diferente do padrão
-            const faculdadesComDiaUtil = faculdades.filter(f => dayData[f] === true);
-            if (faculdadesComDiaUtil.length > 0) {
-                element.classList.add('com-excecao');
-                htmlContent += `<span class="calendar-day-icon" title="${faculdadesComDiaUtil.join(', ')}">${faculdadesComDiaUtil.length}</span>`;
-            }
+            element.classList.add('dia-normal');
         }
-        
-        // Não desabilitar clique: permitir edição também no modo 'all'
     } else {
         // Modo faculdade específica
-        const isFaculdadeUtil = dayData[selectedFaculdade] === true;
+        const dayOfWeek = dayData.DiaSemana;
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const hasFeriado = dayData[selectedFaculdade] === false;
+        const isStandBy = isWeekend || hasFeriado;
         
-        // Mesmas cores do cenário padrão, mas baseadas na coluna da faculdade selecionada
-        if (isFaculdadeUtil) {
-            element.classList.add('padrao-util');
+        if (isStandBy) {
+            element.classList.add('stand-by');
         } else {
-            element.classList.add('nao-util');
+            element.classList.add('dia-normal');
         }
     }
 
@@ -246,26 +230,25 @@ function createDayElement(day, month, year, isOtherMonth) {
     return element;
 }
 
-// Marca/desmarca um dia como útil para a faculdade
+// Marca/desmarca um dia como feriado ou normal para a faculdade
 async function toggleDay(dateKey, element, dayData) {
+    const dayOfWeek = dayData.DiaSemana;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    if (isWeekend) {
+        showFeedback('Não é possível alterar fins de semana');
+        return;
+    }
+
     let newStatus;
 
     if (selectedFaculdade === 'all') {
-        // Modo "Todas as Faculdades" - altera o padrão (DiaUtil) e aplica a todas as faculdades
-        const isDiaUtilPadrao = dayData.DiaUtil === true;
-        newStatus = !isDiaUtilPadrao;
-        dayData.DiaUtil = newStatus;
-        const faculdades = ['FURB', 'UFSC', 'SENAI', 'Unisosciesc', 'Uniasselvi'];
-        faculdades.forEach(f => dayData[f] = newStatus);
-
-        if (useDatabase) {
-            // backend entende faculdade='all' e atualiza todas as colunas correspondentes
-            await saveDayToDatabase(dateKey, newStatus);
-        }
+        showFeedback('Selecione uma faculdade específica para marcar feriados');
+        return;
     } else {
         // Para faculdade específica
-        const isFaculdadeUtil = dayData[selectedFaculdade] === true;
-        newStatus = !isFaculdadeUtil;
+        const isFaculdadeComFeriado = dayData[selectedFaculdade] === false;
+        newStatus = !isFaculdadeComFeriado; // true = normal, false = feriado
         dayData[selectedFaculdade] = newStatus;
 
         if (useDatabase) {
@@ -278,6 +261,18 @@ async function toggleDay(dateKey, element, dayData) {
     updateSummary();
 }
 
+// Helper para feedback visual
+function showFeedback(message) {
+    const feedback = document.getElementById('feedbackMessage');
+    if (!feedback) {
+        alert(message);
+    } else {
+        feedback.textContent = message;
+        setTimeout(() => {
+            feedback.textContent = '';
+        }, 3000);
+    }}
+
 // Re-renderiza um único dia
 function renderSingleDay(dateKey, element) {
     const [year, month, day] = dateKey.split('-');
@@ -287,37 +282,26 @@ function renderSingleDay(dateKey, element) {
 
     element.className = 'calendar-day';
     let htmlContent = `<span class="calendar-day-number">${parseInt(day)}</span>`;
-    const isDiaUtilPadrao = dayData.DiaUtil === true;
 
+    const dayOfWeek = dayData.DiaSemana;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
     if (selectedFaculdade === 'all') {
         // Modo "Todas as Faculdades"
-        const faculdades = ['FURB', 'UFSC', 'SENAI', 'Unisosciesc', 'Uniasselvi'];
-        const faculdadesComFeriado = faculdades.filter(f => dayData[f] === false);
-        
-        if (isDiaUtilPadrao) {
-            element.classList.add('padrao-util');
-            if (faculdadesComFeriado.length > 0) {
-                element.classList.add('com-excecao');
-                htmlContent += `<span class="calendar-day-icon" title="${faculdadesComFeriado.join(', ')}">${faculdadesComFeriado.length}</span>`;
-            }
+        if (isWeekend) {
+            element.classList.add('stand-by');
         } else {
-            element.classList.add('nao-util');
-            const faculdadesComDiaUtil = faculdades.filter(f => dayData[f] === true);
-            if (faculdadesComDiaUtil.length > 0) {
-                element.classList.add('com-excecao');
-                htmlContent += `<span class="calendar-day-icon" title="${faculdadesComDiaUtil.join(', ')}">${faculdadesComDiaUtil.length}</span>`;
-            }
+            element.classList.add('dia-normal');
         }
-        
-        // permitir clique em modo 'all' (será tratado no toggle)
     } else {
         // Modo faculdade específica
-        const isFaculdadeUtil = dayData[selectedFaculdade] === true;
+        const hasFeriado = dayData[selectedFaculdade] === false;
+        const isStandBy = isWeekend || hasFeriado;
         
-        if (isFaculdadeUtil) {
-            element.classList.add('padrao-util');
+        if (isStandBy) {
+            element.classList.add('stand-by');
         } else {
-            element.classList.add('nao-util');
+            element.classList.add('dia-normal');
         }
     }
 
@@ -352,8 +336,8 @@ function updateSummary() {
     const month = currentDate.getMonth();
     const lastDay = new Date(year, month + 1, 0).getDate();
 
-    let totalUtil = 0;
-    let totalNaoUtil = 0;
+    let totalNormal = 0;
+    let totalStandBy = 0;
 
     for (let day = 1; day <= lastDay; day++) {
         const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -361,25 +345,29 @@ function updateSummary() {
 
         if (!dayData) continue;
 
-        let isUtil;
-
+        const dayOfWeek = dayData.DiaSemana;
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        
+        let isStandBy;
+        
         if (selectedFaculdade === 'all') {
-            // Modo "Todas as Faculdades" - conta baseado no padrão (DiaUtil)
-            isUtil = dayData.DiaUtil === true;
+            // Modo "Todas as Faculdades" - contar baseado em fim de semana
+            isStandBy = isWeekend;
         } else {
-            // Para faculdade específica
-            isUtil = dayData[selectedFaculdade] === true;
+            // Para faculdade específica - considerar feriado ou fim de semana
+            const hasFeriado = dayData[selectedFaculdade] === false;
+            isStandBy = isWeekend || hasFeriado;
         }
 
-        if (isUtil) {
-            totalUtil++;
+        if (isStandBy) {
+            totalStandBy++;
         } else {
-            totalNaoUtil++;
+            totalNormal++;
         }
     }
 
-    document.getElementById('totalUtil').textContent = totalUtil;
-    document.getElementById('totalNaoUtil').textContent = totalNaoUtil;
+    document.getElementById('totalNormal').textContent = totalNormal;
+    document.getElementById('totalStandBy').textContent = totalStandBy;
 }
 
 // Navega para o mês anterior

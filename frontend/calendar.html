@@ -64,20 +64,12 @@
             <!-- Legenda -->
             <section class="legend-section">
                 <div class="legend-item">
-                    <div class="legend-color padrao-util"></div>
-                    <span>Dia Útil Padrão</span>
+                    <div class="legend-color dia-normal"></div>
+                    <span>Dia Normal (sem feriado)</span>
                 </div>
                 <div class="legend-item">
-                    <div class="legend-color faculdade-util"></div>
-                    <span>Dia Útil (mesma cor, por faculdade)</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color nao-util"></div>
-                    <span>Dia Não-Útil</span>
-                </div>
-                <div class="legend-item">
-                    <div class="legend-color com-excecao"></div>
-                    <span>Com Exceções (faculdades diferentes)</span>
+                    <div class="legend-color stand-by"></div>
+                    <span>Stand By (feriado ou fim de semana)</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color outro-mes"></div>
@@ -90,12 +82,12 @@
                 <h3>Resumo do Mês</h3>
                 <div class="summary-grid">
                     <div class="summary-card">
-                        <label>Dias Úteis:</label>
-                        <p id="totalUtil">0</p>
+                        <label>Dias Normais:</label>
+                        <p id="totalNormal">0</p>
                     </div>
                     <div class="summary-card">
-                        <label>Dias Não-Úteis:</label>
-                        <p id="totalNaoUtil">0</p>
+                        <label>Stand By:</label>
+                        <p id="totalStandBy">0</p>
                     </div>
                 </div>
             </section>
