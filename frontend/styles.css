@@ -57,6 +57,7 @@ body {
 #presenceForm {
     display: grid;
     gap: 14px;
+
 }
 
 .form-group {
@@ -234,7 +235,7 @@ body {
 .footer {
     text-align: center;
     padding: 14px;
-    color: #35506a;
+    color: #ccc;
     font-size: 0.9rem;
 }
 
