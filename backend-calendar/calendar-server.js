@@ -69,6 +69,29 @@ function calculateDistanceMeters(origin, destination) {
     return earthRadiusMeters * c;
 }
 
+function formatDateKey(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+function getDemoVanLocation() {
+    const baseLatitude = Number(process.env.VAN_DEMO_LATITUDE || -26.9194);
+    const baseLongitude = Number(process.env.VAN_DEMO_LONGITUDE || -49.0661);
+    const timestamp = Date.now() / 1000;
+
+    return {
+        idVan: process.env.VAN_DEMO_ID || 'VAN-01',
+        motorista: process.env.VAN_DEMO_MOTORISTA || 'Motorista',
+        latitude: Number((baseLatitude + Math.sin(timestamp / 35) * 0.006).toFixed(6)),
+        longitude: Number((baseLongitude + Math.cos(timestamp / 35) * 0.006).toFixed(6)),
+        velocidadeKmh: Number((28 + Math.sin(timestamp / 12) * 8).toFixed(1)),
+        atualizadoEm: new Date().toISOString()
+    };
+}
+
 // ==================== ROTAS ====================
 
 // GET / - Health Check
@@ -241,6 +264,67 @@ app.post('/api/presencas/confirmacao', async (req, res) => {
         console.error('Erro ao registrar confirmação de presença:', error);
         return res.status(500).json({ error: error.message });
     }
+});
+
+// GET /api/presencas/monitoramento?data=YYYY-MM-DD
+app.get('/api/presencas/monitoramento', async (req, res) => {
+    try {
+        const data = req.query.data || formatDateKey();
+
+        const result = await pool.query(
+            `
+                SELECT
+                    "NomeAluno",
+                    "EmpresaTransporte",
+                    "DataCalendar",
+                    "Confirmacao",
+                    "AlunoConfirmouEfetivacao",
+                    "DataHoraPreConfirmacao",
+                    "DataHoraConfEfetiva",
+                    "LocalEmbarque",
+                    "TipoDeslocamento"
+                FROM "Confirmacao_Presenca_Diaria"
+                WHERE "DataCalendar" = $1
+                AND "Confirmacao" = true
+                ORDER BY "DataHoraPreConfirmacao" DESC NULLS LAST
+            `,
+            [data]
+        );
+
+        const presencas = result.rows
+            .map((row) => {
+                const coordenadas = parseCoordinatePair(row.LocalEmbarque);
+
+                return {
+                    nomeAluno: row.NomeAluno,
+                    empresaTransporte: row.EmpresaTransporte,
+                    dataCalendar: row.DataCalendar,
+                    confirmacao: row.Confirmacao,
+                    alunoConfirmouEfetivacao: row.AlunoConfirmouEfetivacao,
+                    dataHoraPreConfirmacao: row.DataHoraPreConfirmacao,
+                    dataHoraConfEfetiva: row.DataHoraConfEfetiva,
+                    localEmbarque: row.LocalEmbarque,
+                    tipoDeslocamento: row.TipoDeslocamento,
+                    possuiCoordenadas: Boolean(coordenadas),
+                    latitude: coordenadas ? coordenadas.latitude : null,
+                    longitude: coordenadas ? coordenadas.longitude : null
+                };
+            });
+
+        return res.json({
+            data,
+            total: presencas.length,
+            presencas
+        });
+    } catch (error) {
+        console.error('Erro ao listar presencas para monitoramento:', error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// GET /api/vans/localizacao/tempo-real
+app.get('/api/vans/localizacao/tempo-real', (req, res) => {
+    res.json(getDemoVanLocation());
 });
 
 // POST /api/presencas/efetivacao

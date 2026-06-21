@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Presenca</title>
+    <link rel="stylesheet" href="navigation.css">
+    <link rel="stylesheet" href="monitoramento.css">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
+</head>
+<body>
+    <nav class="app-nav" aria-label="Navegacao principal">
+        <div class="app-nav__inner">
+            <div class="app-nav__brand">Sistema de Transporte</div>
+            <ul class="app-nav__menu">
+                <li><a class="app-nav__link" href="index.html">Confirmacao</a></li>
+                <li><a class="app-nav__link" href="calendar.html">Calendario</a></li>
+                <li><a class="app-nav__link is-active" href="monitoramento.html">Monitoramento</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <main class="monitor-page">
+        <section class="monitor-header">
+            <div>
+                <h1>Monitoramento de presenca</h1>
+                <p>Localizacao confirmada do aluno e acompanhamento da van em tempo real.</p>
+            </div>
+            <div class="monitor-actions">
+                <label for="monitorDate">Data</label>
+                <input type="date" id="monitorDate">
+                <button type="button" id="refreshButton">Atualizar</button>
+            </div>
+        </section>
+
+        <section class="status-grid" aria-label="Resumo do monitoramento">
+            <article class="status-card">
+                <span>Registros da tabela</span>
+                <strong id="recordsCount">0</strong>
+            </article>
+            <article class="status-card">
+                <span>Alunos no mapa</span>
+                <strong id="mappedStudentsCount">0</strong>
+            </article>
+            <article class="status-card">
+                <span>Efetivadas</span>
+                <strong id="effectiveCount">0</strong>
+            </article>
+            <article class="status-card">
+                <span>Van</span>
+                <strong id="vanStatus">Aguardando</strong>
+            </article>
+            <article class="status-card">
+                <span>Ultima leitura</span>
+                <strong id="lastUpdate">--:--</strong>
+            </article>
+        </section>
+
+        <section class="monitor-layout">
+            <aside class="student-panel" aria-label="Alunos confirmados">
+                <div class="panel-title">
+                    <h2>Confirmacoes</h2>
+                    <span id="syncStatus">Sincronizando...</span>
+                </div>
+                <div id="studentList" class="student-list"></div>
+            </aside>
+
+            <section class="map-panel" aria-label="Mapa de acompanhamento">
+                <div id="trackingMap" class="tracking-map"></div>
+                <div id="selectedStudent" class="selected-student">
+                    Selecione uma confirmacao para ver a distancia ate a van.
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+    <script src="monitoramento.js"></script>
+</body>
+</html>
