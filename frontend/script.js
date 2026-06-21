@@ -5,7 +5,8 @@ let mapMarker;
 // Define a data atual no carregamento para agilizar a confirmação.
 document.addEventListener('DOMContentLoaded', () => {
     const dateInput = document.getElementById('confirmationDate');
-    dateInput.value = new Date().toISOString().split('T')[0];
+    dateInput.value = getTodayDate();
+    dateInput.readOnly = true;
 
     initializeBoardingMap();
     document.getElementById('useCurrentLocation').addEventListener('click', useCurrentLocation);
@@ -14,6 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') searchAddress();
     });
 });
+
+function getTodayDate() {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
 
 function initializeBoardingMap() {
     const defaultCenter = [-26.9194, -49.0661];
@@ -140,11 +150,12 @@ async function confirmPresence(event) {
     event.preventDefault();
 
     const studentName = document.getElementById('studentName').value.trim();
-    const confirmationDate = document.getElementById('confirmationDate').value;
+    const confirmationDate = getTodayDate();
     const tripType = document.getElementById('tripType').value;
     const boardingLocation = document.getElementById('boardingLocation').value.trim();
     const latitude = document.getElementById('latitude').value;
     const longitude = document.getElementById('longitude').value;
+    const boardingCoordinates = `${latitude},${longitude}`;
 
     if (!studentName || !confirmationDate || !tripType || !boardingLocation || !latitude || !longitude) {
         showFeedback('Preencha os campos e selecione a localizacao no mapa.', true);
@@ -161,7 +172,7 @@ async function confirmPresence(event) {
                 nomeAluno: studentName,
                 dataConfirmacao: confirmationDate,
                 tipoDeslocamento: tripType,
-                localEmbarque: boardingLocation,
+                localEmbarque: boardingCoordinates,
                 latitude: Number(latitude),
                 longitude: Number(longitude)
             })
@@ -182,7 +193,7 @@ async function confirmPresence(event) {
 
 function resetFormKeepingDate() {
     const form = document.getElementById('presenceForm');
-    const currentDate = document.getElementById('confirmationDate').value;
+    const currentDate = getTodayDate();
 
     form.reset();
     document.getElementById('confirmationDate').value = currentDate;

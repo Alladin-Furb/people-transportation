@@ -82,6 +82,12 @@ body {
     background: #ffffff;
 }
 
+.form-group input[readonly] {
+    background: #eef3f8;
+    color: #516273;
+    cursor: not-allowed;
+}
+
 .map-tools {
     display: flex;
     gap: 10px;

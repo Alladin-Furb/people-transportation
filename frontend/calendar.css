@@ -193,20 +193,33 @@ body {
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;
-    cursor: pointer;
+    cursor: default;
     transition: all 0.3s;
     position: relative;
     font-size: 0.9em;
 }
 
 .calendar-day:hover {
-    transform: scale(1.05);
-    box-shadow: inset 0 0 8px rgba(0,0,0,0.1);
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.08);
 }
 
 .calendar-day-number {
     font-weight: 600;
     color: inherit;
+}
+
+.calendar-day-badge {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    margin-top: 8px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 0.72em;
+    font-weight: 700;
+    line-height: 1.1;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .calendar-day-icon {
@@ -235,7 +248,43 @@ body {
     color: #6c757d;
     border-color: #adb5bd;
     opacity: 0.7;
-    cursor: not-allowed;
+    cursor: default;
+}
+
+.calendar-day.tipo-feriado {
+    background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
+    color: #721c24;
+    border-color: #dc3545;
+    opacity: 1;
+}
+
+.calendar-day.tipo-feriado .calendar-day-badge {
+    background: #dc3545;
+    color: #fff;
+}
+
+.calendar-day.tipo-ferias {
+    background: linear-gradient(135deg, #d7ecff 0%, #b9dcff 100%);
+    color: #0b4f7a;
+    border-color: #3498db;
+    opacity: 1;
+}
+
+.calendar-day.tipo-ferias .calendar-day-badge {
+    background: #1f78b4;
+    color: #fff;
+}
+
+.calendar-day.tipo-ponto-facultativo {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe39b 100%);
+    color: #856404;
+    border-color: #ffc107;
+    opacity: 1;
+}
+
+.calendar-day.tipo-ponto-facultativo .calendar-day-badge {
+    background: #b58100;
+    color: #fff;
 }
 
 .calendar-day.stand-by:hover {
@@ -245,106 +294,13 @@ body {
 }
 
 
-/* Estado: Dia útil padrão com exceções (algumas faculdades têm feriado diferente) */
-.calendar-day.padrao-util.com-excecao {
-    background: linear-gradient(135deg, #d4edda 0%, #fff3cd 100%);
-    border-color: #ffc107;
-}
-
-.calendar-day.padrao-util.com-excecao:hover {
-    background: linear-gradient(135deg, #c3e6cb 0%, #ffeaa7 100%);
-}
-
-/* Modo visualização apenas (Todas as Faculdades) */
-.calendar-day.visualizacao-apenas {
-    cursor: not-allowed;
-}
-
-.calendar-day.visualizacao-apenas:hover {
-    transform: none;
-    box-shadow: none;
-}
-
-/* Estado: Dia útil específico da faculdade (alterado do padrão para SIM) */
-.calendar-day.faculdade-util {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-    color: #856404;
-    border-color: #ffc107;
-    font-weight: bold;
-}
-
-.calendar-day.faculdade-util:hover {
-    background: linear-gradient(135deg, #ffeaa7 0%, #ffdb8d 100%);
-    border-color: #e0a800;
-}
-
-.calendar-day.faculdade-util::before {
-    content: '✓';
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 14px;
-    color: #f39c12;
-}
-
-/* Estado: Dia não-útil (alterado do padrão para NÃO) */
-.calendar-day.nao-util {
-    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-    color: #721c24;
-    border-color: #dc3545;
-}
-
-.calendar-day.nao-util:hover {
-    background: linear-gradient(135deg, #f5c6cb 0%, #f1b0b7 100%);
-    border-color: #c82333;
-}
-
-/* Estado: Dia não-útil com exceções (algumas faculdades têm dia útil diferente) */
-.calendar-day.nao-util.com-excecao {
-    background: linear-gradient(135deg, #f8d7da 0%, #fff3cd 100%);
-    border-color: #ffc107;
-}
-
-.calendar-day.nao-util.com-excecao:hover {
-    background: linear-gradient(135deg, #f5c6cb 0%, #ffeaa7 100%);
-}
-
-.calendar-day.nao-util::before {
-    content: '✕';
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 14px;
-    color: #dc3545;
-}
-
-/* Estado: Dia com valores mistos entre faculdades */
-.calendar-day.misto {
-    background: linear-gradient(135deg, #e2e3e5 0%, #d1d3d6 100%);
-    color: #6c757d;
-    border-color: #adb5bd;
-}
-
-.calendar-day.misto:hover {
-    background: linear-gradient(135deg, #d1d3d6 0%, #c1c3c6 100%);
-    border-color: #999;
-}
-
-.calendar-day.misto::before {
-    content: '~';
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 14px;
-    color: #6c757d;
-}
 
 /* Estado: Sem dados (não carregado ainda) */
 .calendar-day.sem-dados {
-    background: #f0f0f0;
-    color: #999;
-    border-color: #ccc;
-    cursor: not-allowed;
+    background: #fff3cd;
+    color: #856404;
+    border-color: #ffc107;
+    cursor: default;
 }
 
 .calendar-day.sem-dados:hover {
@@ -357,7 +313,23 @@ body {
     background: #f9f9f9;
     color: #bbb;
     border-color: #e8e8e8;
-    cursor: not-allowed;
+    cursor: default;
+}
+
+.calendar-status {
+    min-height: 20px;
+    margin: -15px 0 20px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.calendar-status.error {
+    color: #b02a37;
+}
+
+.calendar-status.warning {
+    color: #856404;
 }
 
 .calendar-day.outro-mes:hover {
@@ -406,20 +378,21 @@ body {
     opacity: 0.7;
 }
 
-.legend-color.faculdade-util {
-    background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-    border-color: #28a745;
-}
-
-.legend-color.nao-util {
-    background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+.legend-color.feriado {
+    background: linear-gradient(135deg, #f8d7da 0%, #f1b0b7 100%);
     border-color: #dc3545;
 }
 
-.legend-color.com-excecao {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+.legend-color.ferias {
+    background: linear-gradient(135deg, #d7ecff 0%, #b9dcff 100%);
+    border-color: #3498db;
+}
+
+.legend-color.ponto-facultativo {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe39b 100%);
     border-color: #ffc107;
 }
+
 
 .legend-color.outro-mes {
     background: #e8e8e8;
@@ -433,41 +406,41 @@ body {
 
 /* Summary Section */
 .summary-section {
-    margin-bottom: 30px;
-    padding: 20px;
+    margin-bottom: 18px;
+    padding: 12px 14px;
     background: var(--light-gray);
     border-radius: 8px;
 }
 
 .summary-section h3 {
     color: var(--primary-color);
-    margin-bottom: 15px;
-    font-size: 1.1em;
+    margin-bottom: 10px;
+    font-size: 0.95em;
 }
 
 .summary-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(2, minmax(120px, 180px));
+    gap: 10px;
 }
 
 .summary-card {
     background: white;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 4px solid var(--secondary-color);
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--secondary-color);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .summary-card label {
     display: block;
-    font-size: 0.9em;
+    font-size: 0.78em;
     color: var(--dark-gray);
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .summary-card p {
-    font-size: 2em;
+    font-size: 1.35em;
     font-weight: bold;
     color: var(--primary-color);
 }
@@ -564,6 +537,10 @@ body {
     .legend-section {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .actions-section {

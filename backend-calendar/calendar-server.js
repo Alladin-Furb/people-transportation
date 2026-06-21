@@ -1,49 +1,72 @@
 require('dotenv').config();
 const express = require('express');
-const { Pool } = require('pg');
 const cors = require('cors');
+const { pool, testConnection, databaseConfig } = require('./src/config/database');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const CALENDAR_TABLE = 'calendario_2026';
+const DEFAULT_CONFIRMATION_RADIUS_METERS = 100;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Configuração do banco de dados
-const pool = new Pool({
-    user: process.env.DB_USER || 'postgres',
-    host: process.env.DB_HOST || 'localhost',
-    database: process.env.DB_NAME || 'people_transportation',
-    password: process.env.DB_PASSWORD || 'postgres',
-    port: process.env.DB_PORT || 5432,
-});
-
-// Testa conexão
-pool.on('connect', () => {
-    console.log('✓ Conectado ao PostgreSQL');
-});
-
-pool.on('error', (err) => {
-    console.error('❌ Erro na conexão:', err);
-});
-
 async function ensurePresenceTable() {
     await pool.query(`
-        CREATE TABLE IF NOT EXISTS "PresenceConfirmation" (
-            "Id" SERIAL PRIMARY KEY,
-            "NomeAluno" VARCHAR(255) NOT NULL,
-            "DataConfirmacao" DATE NOT NULL,
-            "TipoDeslocamento" VARCHAR(30) NOT NULL,
-            "LocalEmbarque" VARCHAR(255) NOT NULL,
-            "Latitude" NUMERIC(10, 6),
-            "Longitude" NUMERIC(10, 6),
-            "CreatedAt" TIMESTAMP DEFAULT NOW()
+        CREATE TABLE IF NOT EXISTS "Confirmacao_Presenca_Diaria" (
+            "NomeAluno" VARCHAR(255),
+            "EmpresaTransporte" VARCHAR(255),
+            "DataCalendar" DATE,
+            "Confirmacao" BOOLEAN,
+            "DataHoraPreConfirmacao" TIMESTAMP,
+            "DataHoraConfEfetiva" TIME,
+            "AlunoConfirmouEfetivacao" BOOLEAN,
+            "LocalEmbarque" VARCHAR(255),
+            "TipoDeslocamento" VARCHAR(30)
         )
     `);
 
-    await pool.query('ALTER TABLE "PresenceConfirmation" ADD COLUMN IF NOT EXISTS "Latitude" NUMERIC(10, 6)');
-    await pool.query('ALTER TABLE "PresenceConfirmation" ADD COLUMN IF NOT EXISTS "Longitude" NUMERIC(10, 6)');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "TipoDeslocamento" VARCHAR(30)');
+}
+
+function parseCoordinatePair(value) {
+    if (!value || typeof value !== 'string') {
+        return null;
+    }
+
+    const [latitude, longitude] = value.split(',').map((coordinate) => Number(coordinate.trim()));
+
+    if (
+        Number.isNaN(latitude) ||
+        Number.isNaN(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+    ) {
+        return null;
+    }
+
+    return { latitude, longitude };
+}
+
+function calculateDistanceMeters(origin, destination) {
+    const earthRadiusMeters = 6371000;
+    const toRadians = (degrees) => degrees * (Math.PI / 180);
+    const deltaLatitude = toRadians(destination.latitude - origin.latitude);
+    const deltaLongitude = toRadians(destination.longitude - origin.longitude);
+    const originLatitude = toRadians(origin.latitude);
+    const destinationLatitude = toRadians(destination.latitude);
+
+    const a =
+        Math.sin(deltaLatitude / 2) ** 2 +
+        Math.cos(originLatitude) *
+            Math.cos(destinationLatitude) *
+            Math.sin(deltaLongitude / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return earthRadiusMeters * c;
 }
 
 // ==================== ROTAS ====================
@@ -56,8 +79,13 @@ app.get('/', (req, res) => {
 // GET /api/health - Verifica conexão com DB
 app.get('/api/health', async (req, res) => {
     try {
-        await pool.query('SELECT NOW()');
-        res.json({ status: 'OK', database: 'Connected' });
+        const connection = await testConnection();
+        res.json({
+            status: 'OK',
+            database: 'Connected',
+            databaseName: databaseConfig.database,
+            checkedAt: connection.now
+        });
     } catch (error) {
         res.status(500).json({ status: 'ERROR', error: error.message });
     }
@@ -66,10 +94,10 @@ app.get('/api/health', async (req, res) => {
 // ==================== CALENDÁRIO ====================
 
 // GET /api/calendar - Lista calendário do mês
-// Query params: ?mes=2026-05&faculdade=FURB
+// Query params: ?mes=2026-05
 app.get('/api/calendar', async (req, res) => {
     try {
-        const { mes, faculdade } = req.query;
+        const { mes } = req.query;
 
         if (!mes) {
             return res.status(400).json({ error: 'Parâmetro "mes" é obrigatório (formato: YYYY-MM)' });
@@ -77,21 +105,29 @@ app.get('/api/calendar', async (req, res) => {
 
         const [year, month] = mes.split('-');
 
-        let query = `
-            SELECT 
-                "Data",
-                "DiaUtil",
-                "DiaSemana",
-                "DataFormatada",
-                "FURB",
-                "UFSC",
-                "SENAI",
-                "Unisosciesc",
-                "Uniasselvi"
-            FROM "Calendar"
-            WHERE EXTRACT(YEAR FROM "Data") = $1
-            AND EXTRACT(MONTH FROM "Data") = $2
-            ORDER BY "Data" ASC
+        const query = `
+            SELECT
+                data AS "Data",
+                COALESCE(dia_util, false) AS "DiaUtil",
+                CASE dia_semana
+                    WHEN 'Domingo' THEN 0
+                    WHEN 'Segunda-feira' THEN 1
+                    WHEN 'Terça-feira' THEN 2
+                    WHEN 'Quarta-feira' THEN 3
+                    WHEN 'Quinta-feira' THEN 4
+                    WHEN 'Sexta-feira' THEN 5
+                    WHEN 'Sábado' THEN 6
+                    ELSE EXTRACT(DOW FROM data)::int
+                END AS "DiaSemana",
+                data_formatada AS "DataFormatada",
+                COALESCE(feriado, false) AS "Feriado",
+                COALESCE(ponto_facultativo, false) AS "PontoFacultativo",
+                descricao AS "Descricao",
+                tipo AS "Tipo"
+            FROM ${CALENDAR_TABLE}
+            WHERE ano = $1
+            AND mes = $2
+            ORDER BY data ASC
         `;
 
         const result = await pool.query(query, [year, month]);
@@ -108,7 +144,28 @@ app.get('/api/calendar/:id', async (req, res) => {
         const { id } = req.params;
 
         const result = await pool.query(
-            'SELECT * FROM "Calendar" WHERE "Data" = $1',
+            `
+                SELECT
+                    data AS "Data",
+                    COALESCE(dia_util, false) AS "DiaUtil",
+                    CASE dia_semana
+                        WHEN 'Domingo' THEN 0
+                        WHEN 'Segunda-feira' THEN 1
+                        WHEN 'Terça-feira' THEN 2
+                        WHEN 'Quarta-feira' THEN 3
+                        WHEN 'Quinta-feira' THEN 4
+                        WHEN 'Sexta-feira' THEN 5
+                        WHEN 'Sábado' THEN 6
+                        ELSE EXTRACT(DOW FROM data)::int
+                    END AS "DiaSemana",
+                    data_formatada AS "DataFormatada",
+                    COALESCE(feriado, false) AS "Feriado",
+                    COALESCE(ponto_facultativo, false) AS "PontoFacultativo",
+                    descricao AS "Descricao",
+                    tipo AS "Tipo"
+                FROM ${CALENDAR_TABLE}
+                WHERE data = $1
+            `,
             [id]
         );
 
@@ -123,104 +180,22 @@ app.get('/api/calendar/:id', async (req, res) => {
     }
 });
 
-// POST /api/calendar - Atualiza dias úteis para uma faculdade ou todas
-// Body: { data: "2026-05-01", faculdade: "FURB" ou "all", diaUtil: true }
-app.post('/api/calendar', async (req, res) => {
-    try {
-        const { data, faculdade, diaUtil } = req.body;
-
-        if (!data || !faculdade) {
-            return res.status(400).json({ error: 'Campos "data" e "faculdade" são obrigatórios' });
-        }
-
-        // Valida faculdade
-        const faculdadesValidas = ['FURB', 'UFSC', 'SENAI', 'Unisosciesc', 'Uniasselvi', 'all'];
-        if (!faculdadesValidas.includes(faculdade)) {
-            return res.status(400).json({ error: `Faculdade inválida. Válidas: ${faculdadesValidas.join(', ')}` });
-        }
-
-        let query;
-        let params;
-
-        if (faculdade === 'all') {
-            // Atualiza todas as faculdades
-            query = `
-                UPDATE "Calendar"
-                SET "FURB" = $1, "UFSC" = $1, "SENAI" = $1, "Unisosciesc" = $1, "Uniasselvi" = $1
-                WHERE "Data" = $2
-                RETURNING "Data", "DiaUtil", "DiaSemana", "FURB", "UFSC", "SENAI", "Unisosciesc", "Uniasselvi"
-            `;
-            params = [diaUtil === true || diaUtil === 'true', data];
-        } else {
-            // Atualiza apenas uma faculdade
-            query = `
-                UPDATE "Calendar"
-                SET "${faculdade}" = $1
-                WHERE "Data" = $2
-                RETURNING "Data", "DiaUtil", "DiaSemana", "FURB", "UFSC", "SENAI", "Unisosciesc", "Uniasselvi"
-            `;
-            params = [diaUtil === true || diaUtil === 'true', data];
-        }
-
-        const result = await pool.query(query, params);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ error: 'Data não encontrada no calendário' });
-        }
-
-        res.status(200).json({
-            message: 'Dia atualizado com sucesso',
-            data: result.rows[0]
-        });
-    } catch (error) {
-        console.error('Erro ao atualizar dia:', error);
-        res.status(500).json({ error: error.message });
-    }
+app.post('/api/calendar', (req, res) => {
+    res.status(405).json({ error: 'O calendario universal e somente leitura.' });
 });
 
-// ==================== FACULDADES ====================
-
-// GET /api/faculdades - Lista todas as faculdades
-app.get('/api/faculdades', async (req, res) => {
-    try {
-        res.json([
-            { id: 'FURB', nome: 'FURB' },
-            { id: 'UFSC', nome: 'UFSC' },
-            { id: 'SENAI', nome: 'SENAI' },
-            { id: 'Unisosciesc', nome: 'Unisosciesc' },
-            { id: 'Uniasselvi', nome: 'Uniasselvi' }
-        ]);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// GET /api/empresas - Alias para /api/faculdades (compatibilidade)
-app.get('/api/empresas', async (req, res) => {
-    try {
-        res.json([
-            { id: 'FURB', nome: 'FURB' },
-            { id: 'UFSC', nome: 'UFSC' },
-            { id: 'SENAI', nome: 'SENAI' },
-            { id: 'Unisosciesc', nome: 'Unisosciesc' },
-            { id: 'Uniasselvi', nome: 'Uniasselvi' }
-        ]);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // ==================== CONFIRMAÇÃO DE PRESENÇA ====================
 
 // POST /api/presencas/confirmacao
-// Body: { nomeAluno, dataConfirmacao, tipoDeslocamento, localEmbarque, latitude, longitude }
+// Body: { nomeAluno, dataConfirmacao, tipoDeslocamento, latitude, longitude }
 app.post('/api/presencas/confirmacao', async (req, res) => {
     try {
-        const { nomeAluno, dataConfirmacao, tipoDeslocamento, localEmbarque, latitude, longitude } = req.body;
+        const { nomeAluno, dataConfirmacao, tipoDeslocamento, latitude, longitude } = req.body;
 
-        if (!nomeAluno || !dataConfirmacao || !tipoDeslocamento || !localEmbarque || latitude === undefined || longitude === undefined) {
+        if (!nomeAluno || !dataConfirmacao || !tipoDeslocamento || latitude === undefined || longitude === undefined) {
             return res.status(400).json({
-                error: 'Campos obrigatórios: nomeAluno, dataConfirmacao, tipoDeslocamento, localEmbarque, latitude, longitude'
+                error: 'Campos obrigatórios: nomeAluno, dataConfirmacao, tipoDeslocamento, latitude, longitude'
             });
         }
 
@@ -238,22 +213,142 @@ app.post('/api/presencas/confirmacao', async (req, res) => {
             return res.status(400).json({ error: 'Coordenadas inválidas (latitude/longitude).' });
         }
 
+        const coordenadasEmbarque = `${lat},${lng}`;
+
         const result = await pool.query(
             `
-                INSERT INTO "PresenceConfirmation"
-                ("NomeAluno", "DataConfirmacao", "TipoDeslocamento", "LocalEmbarque", "Latitude", "Longitude")
-                VALUES ($1, $2, $3, $4, $5, $6)
-                RETURNING "Id", "NomeAluno", "DataConfirmacao", "TipoDeslocamento", "LocalEmbarque", "Latitude", "Longitude", "CreatedAt"
+                INSERT INTO "Confirmacao_Presenca_Diaria"
+                ("NomeAluno", "EmpresaTransporte", "DataCalendar", "Confirmacao", "DataHoraPreConfirmacao", "LocalEmbarque", "TipoDeslocamento")
+                VALUES ($1, $2, $3, true, NOW(), $4, $5)
+                RETURNING
+                    "NomeAluno",
+                    "EmpresaTransporte",
+                    "DataCalendar",
+                    "Confirmacao",
+                    "DataHoraPreConfirmacao",
+                    "LocalEmbarque",
+                    "TipoDeslocamento"
             `,
-            [nomeAluno.trim(), dataConfirmacao, tipoDeslocamento, localEmbarque.trim(), lat, lng]
+            [nomeAluno.trim(), '', dataConfirmacao, coordenadasEmbarque, tipoDeslocamento]
         );
 
         return res.status(201).json({
             message: 'Presença confirmada com sucesso',
+            table: 'Confirmacao_Presenca_Diaria',
             data: result.rows[0]
         });
     } catch (error) {
         console.error('Erro ao registrar confirmação de presença:', error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// POST /api/presencas/efetivacao
+// Body: { nomeAluno, dataCalendar, vanLatitude, vanLongitude, raioMetros? }
+app.post('/api/presencas/efetivacao', async (req, res) => {
+    try {
+        const { nomeAluno, dataCalendar, vanLatitude, vanLongitude, raioMetros } = req.body;
+
+        if (!nomeAluno || !dataCalendar || vanLatitude === undefined || vanLongitude === undefined) {
+            return res.status(400).json({
+                error: 'Campos obrigatórios: nomeAluno, dataCalendar, vanLatitude, vanLongitude'
+            });
+        }
+
+        const vanCoordinates = {
+            latitude: Number(vanLatitude),
+            longitude: Number(vanLongitude)
+        };
+
+        if (
+            Number.isNaN(vanCoordinates.latitude) ||
+            Number.isNaN(vanCoordinates.longitude) ||
+            vanCoordinates.latitude < -90 ||
+            vanCoordinates.latitude > 90 ||
+            vanCoordinates.longitude < -180 ||
+            vanCoordinates.longitude > 180
+        ) {
+            return res.status(400).json({ error: 'Coordenadas da van inválidas.' });
+        }
+
+        const radiusMeters = raioMetros === undefined ? DEFAULT_CONFIRMATION_RADIUS_METERS : Number(raioMetros);
+
+        if (Number.isNaN(radiusMeters) || radiusMeters <= 0) {
+            return res.status(400).json({ error: 'raioMetros deve ser um número maior que zero.' });
+        }
+
+        const preConfirmationResult = await pool.query(
+            `
+                SELECT
+                    ctid,
+                    "NomeAluno",
+                    "DataCalendar",
+                    "LocalEmbarque",
+                    "Confirmacao",
+                    "AlunoConfirmouEfetivacao",
+                    "DataHoraPreConfirmacao"
+                FROM "Confirmacao_Presenca_Diaria"
+                WHERE "NomeAluno" = $1
+                AND "DataCalendar" = $2
+                AND "Confirmacao" = true
+                ORDER BY "DataHoraPreConfirmacao" DESC NULLS LAST
+                LIMIT 1
+            `,
+            [nomeAluno.trim(), dataCalendar]
+        );
+
+        if (preConfirmationResult.rows.length === 0) {
+            return res.status(404).json({ error: 'Pré-confirmação de presença não encontrada para este aluno e data.' });
+        }
+
+        const preConfirmation = preConfirmationResult.rows[0];
+        const studentBoardingCoordinates = parseCoordinatePair(preConfirmation.LocalEmbarque);
+
+        if (!studentBoardingCoordinates) {
+            return res.status(422).json({ error: 'LocalEmbarque da pré-confirmação não possui coordenadas válidas.' });
+        }
+
+        const distanceMeters = calculateDistanceMeters(studentBoardingCoordinates, vanCoordinates);
+        const isWithinRadius = distanceMeters <= radiusMeters;
+
+        if (!isWithinRadius) {
+            return res.status(200).json({
+                efetivada: false,
+                motivo: 'Van fora do raio permitido para efetivar presença.',
+                distanciaMetros: Number(distanceMeters.toFixed(2)),
+                raioMetros: radiusMeters
+            });
+        }
+
+        const updateResult = await pool.query(
+            `
+                UPDATE "Confirmacao_Presenca_Diaria"
+                SET
+                    "AlunoConfirmouEfetivacao" = true,
+                    "DataHoraConfEfetiva" = NOW()::time
+                WHERE ctid = $1
+                RETURNING
+                    "NomeAluno",
+                    "DataCalendar",
+                    "Confirmacao",
+                    "AlunoConfirmouEfetivacao",
+                    "DataHoraPreConfirmacao",
+                    "DataHoraConfEfetiva",
+                    "LocalEmbarque",
+                    "TipoDeslocamento"
+            `,
+            [preConfirmation.ctid]
+        );
+
+        return res.status(200).json({
+            efetivada: true,
+            message: 'Presença efetivada com sucesso.',
+            distanciaMetros: Number(distanceMeters.toFixed(2)),
+            raioMetros: radiusMeters,
+            data: updateResult.rows[0]
+        });
+    } catch (error) {
+        console.error('Erro ao efetivar confirmação de presença:', error);
         return res.status(500).json({ error: error.message });
     }
 });
@@ -268,6 +363,7 @@ app.use((req, res) => {
 
 async function startServer() {
     try {
+        await testConnection();
         await ensurePresenceTable();
 
         app.listen(PORT, () => {
@@ -275,7 +371,7 @@ async function startServer() {
 ╔════════════════════════════════════════╗
 ║   Servidor Calendário Acadêmico        ║
 ║   Rodando em: http://localhost:${PORT}       ║
-║   Banco: ${process.env.DB_NAME}              ║
+║   Banco: ${databaseConfig.database}              ║
 ╚════════════════════════════════════════╝
             `);
         });

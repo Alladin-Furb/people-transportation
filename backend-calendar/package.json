@@ -5,7 +5,9 @@
   "main": "calendar-server.js",
   "scripts": {
     "start": "node calendar-server.js",
-    "dev": "nodemon calendar-server.js"
+    "dev": "nodemon calendar-server.js",
+    "db:explore": "node explore-db.js",
+    "db:test": "node test-db-connection.js"
   },
   "dependencies": {
     "express": "^4.18.2",

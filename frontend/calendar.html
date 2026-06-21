@@ -3,48 +3,59 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Calendário</title>
+    <title>Calendario Academico</title>
+    <link rel="stylesheet" href="navigation.css">
     <link rel="stylesheet" href="calendar.css">
 </head>
 <body>
+    <nav class="app-nav" aria-label="Navegacao principal">
+        <div class="app-nav__inner">
+            <div class="app-nav__brand">Sistema de Transporte</div>
+            <ul class="app-nav__menu">
+                <li><a class="app-nav__link" href="index.html">Confirmacao</a></li>
+                <li><a class="app-nav__link is-active" href="calendar.html">Calendario</a></li>
+            </ul>
+        </div>
+    </nav>
+
     <div class="container">
         <header class="header">
-            <h1>📅 Calendário Acadêmico</h1>
-            <p>Configure os dias úteis para cada faculdade</p>
+            <h1>Calendario Academico</h1>
         </header>
 
         <main class="main-content">
-            <!-- Seção de Controles -->
             <section class="controls-section">
                 <div class="control-group">
-                    <label for="faculdadeSelect">🏫 Faculdade:</label>
-                    <select id="faculdadeSelect" onchange="loadCalendar()">
-                        <option value="all">✓ Todas as Faculdades</option>
-                        <option value="FURB">FURB</option>
-                        <option value="UFSC">UFSC</option>
-                        <option value="SENAI">SENAI</option>
-                        <option value="Unisosciesc">Unisosciesc</option>
-                        <option value="Uniasselvi">Uniasselvi</option>
-                    </select>
-                </div>
-
-                <div class="control-group">
-                    <label for="monthYear">Período:</label>
+                    <label for="monthYear">Periodo:</label>
                     <input type="month" id="monthYear" onchange="loadCalendar()">
                 </div>
 
                 <button class="btn-today" onclick="goToToday()">Hoje</button>
             </section>
 
-            <!-- Calendário -->
+            <div class="calendar-status" id="calendarStatus"></div>
+
+            <section class="summary-section">
+                <h3>Resumo do Mes</h3>
+                <div class="summary-grid">
+                    <div class="summary-card">
+                        <label>Dias uteis:</label>
+                        <p id="totalNormal">0</p>
+                    </div>
+                    <div class="summary-card">
+                        <label>Dias off:</label>
+                        <p id="totalStandBy">0</p>
+                    </div>
+                </div>
+            </section>
+
             <section class="calendar-section">
                 <div class="calendar-header">
-                    <button class="btn-nav" onclick="previousMonth()">← Anterior</button>
+                    <button class="btn-nav" onclick="previousMonth()">Anterior</button>
                     <h2 id="currentMonth"></h2>
-                    <button class="btn-nav" onclick="nextMonth()">Próximo →</button>
+                    <button class="btn-nav" onclick="nextMonth()">Proximo</button>
                 </div>
 
-                <!-- Dias da Semana -->
                 <div class="calendar-container">
                     <div class="calendar-weekdays">
                         <div class="weekday">Dom</div>
@@ -56,53 +67,45 @@
                         <div class="weekday">Sab</div>
                     </div>
 
-                    <!-- Dias do Calendário -->
                     <div class="calendar-days" id="calendarDays"></div>
                 </div>
             </section>
 
-            <!-- Legenda -->
             <section class="legend-section">
                 <div class="legend-item">
                     <div class="legend-color dia-normal"></div>
-                    <span>Dia Normal (sem feriado)</span>
+                    <span>Dia util</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color stand-by"></div>
-                    <span>Stand By (feriado ou fim de semana)</span>
+                    <span>Stand by</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color feriado"></div>
+                    <span>Feriado</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color ferias"></div>
+                    <span>Ferias/Recesso</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color ponto-facultativo"></div>
+                    <span>Ponto facultativo</span>
                 </div>
                 <div class="legend-item">
                     <div class="legend-color outro-mes"></div>
-                    <span>Outro Mês</span>
+                    <span>Outro mes</span>
                 </div>
             </section>
 
-            <!-- Resumo -->
-            <section class="summary-section">
-                <h3>Resumo do Mês</h3>
-                <div class="summary-grid">
-                    <div class="summary-card">
-                        <label>Dias Normais:</label>
-                        <p id="totalNormal">0</p>
-                    </div>
-                    <div class="summary-card">
-                        <label>Stand By:</label>
-                        <p id="totalStandBy">0</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Ações -->
             <section class="actions-section">
-                <button class="btn-action save" onclick="saveCalendar()">💾 Salvar Alterações</button>
-                <button class="btn-action reset" onclick="resetCalendar()">🔄 Limpar Seleção</button>
-                <button class="btn-action export" onclick="exportData()">📥 Exportar</button>
+                <button class="btn-action export" onclick="exportData()">Exportar</button>
             </section>
         </main>
     </div>
 
     <footer class="footer">
-        <p>&copy; 2026 Calendário Acadêmico</p>
+        <p>&copy; 2026 Calendario Academico</p>
     </footer>
 
     <script src="calendar.js"></script>

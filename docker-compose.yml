@@ -23,7 +23,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ./backend-calendar
       dockerfile: Dockerfile
     container_name: people-transportation-backend
     environment:
@@ -32,17 +32,17 @@ services:
       DB_NAME: people_transportation
       DB_PASSWORD: postgres
       DB_PORT: 5432
-      PORT: 3000
+      PORT: 3001
       NODE_ENV: development
     ports:
-      - "3000:3000"
+      - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - transportation-network
     volumes:
-      - ./backend:/app
+      - ./backend-calendar:/app
       - /app/node_modules
 
 volumes:
