@@ -10,7 +10,7 @@
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 
-# Package Files #
+# Package Files
 *.jar
 *.war
 *.nar
@@ -19,10 +19,16 @@
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# Java virtual machine crash logs
 hs_err_pid*
 replay_pid*
 
 # Node / environment
 node_modules/
 .env
+
+# Gradle local state
+/api-gateway/api-gateway/.gradle
+/api-gateway/auth-service/.gradle
+api-gateway/auth-service/build.gradle
+api-gateway/auth-service/settings.gradle

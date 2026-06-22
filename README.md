@@ -1,106 +1,45 @@
-# Sistema de Confirmação de Presença - Versão Básica
+# People Transportation
 
-## 🎯 Objetivo
+Sistema para apoio ao transporte universitario, com frontend web, calendario academico, confirmacao de presenca, monitoramento de vans e servicos auxiliares.
 
-Sistema simples para confirmar presença de alunos no transporte universitário.
+## Estrutura principal
 
-## ✨ Características Atuais
+- `frontend/`: telas web em HTML, CSS e JavaScript.
+- `backend-calendar/`: API Node.js/Express para calendario, presenca, monitoramento, autenticacao simples, mensageria e eleicao Bully via HTTP.
+- `database/`: scripts SQL para o banco PostgreSQL usado pelo backend Node.
+- `Presenca/`: servico Java/Spring de presenca preservado da branch principal.
+- `RegisterAdm/`: servico Java/Spring de cadastro administrativo.
+- `ElectionNode/`: servico .NET com algoritmo Bully e otimizacao de rotas.
+- `Relatorio/`: servico .NET para relatorios.
 
-- ✅ **Frontend puro** - HTML, CSS, JavaScript
-- ✅ **Dados locais** - localStorage (sem servidor)
-- ✅ **Adicionar alunos** - Nome e email
-- ✅ **Confirmar presença** - Presente ou Ausente
-- ✅ **Estatísticas** - Total, confirmados, não confirmados
-- ✅ **Responsivo** - Funciona em desktop, tablet e mobile
+## Backend Node
 
-## 📁 Estrutura
-
-```
-people-transportation/
-├── frontend/
-│   ├── index.html      (Interface)
-│   ├── styles.css      (Estilos)
-│   └── script.js       (Lógica - localStorage)
-│
-└── database/
-    └── schema.sql      (Script SQL para PostgreSQL)
-```
-
-## 🚀 Como Usar
-
-### 1. **Abrir no navegador**
-
-Abra o arquivo `frontend/index.html` no navegador (duplo clique ou arrastar para o navegador).
-
-### 2. **Adicionar alunos**
-
-- Digite o nome do aluno
-- Digite o email
-- Clique em "Adicionar Aluno"
-
-### 3. **Confirmar presença**
-
-- Para cada aluno, escolha:
-  - ✓ **Presente**
-  - ✗ **Ausente**
-  - 🗑️ **Remover**
-
-### 4. **Limpar dados**
-
-Clique em "🗑️ Limpar Tudo" para remover todos os alunos.
-
-## 💾 Dados
-
-Atualmente os dados são salvos no **localStorage** do navegador:
-- Ficam salvos automaticamente
-- Persistem ao fechar e reabrir o navegador
-- Cada navegador tem seus próprios dados
-
-## 🔌 Próximo Passo: PostgreSQL
-
-Quando quiser integrar com PostgreSQL:
-
-1. Crie o banco de dados:
 ```bash
-# No PostgreSQL
-CREATE DATABASE confirmacao_presenca;
+cd backend-calendar
+npm install
+npm start
 ```
 
-2. Execute o script SQL:
-```bash
-psql -U postgres -d confirmacao_presenca -f database/schema.sql
-```
+Variaveis uteis:
 
-3. Depois, adicionaremos um backend simples para conexão.
+- `PORT`: porta da API, por padrao `3001`.
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: conexao PostgreSQL.
+- `AUTH_DEFAULT_USER`, `AUTH_DEFAULT_PASSWORD`, `AUTH_SECRET`: autenticacao da API.
+- `RABBITMQ_ENABLED=true`: habilita integracao RabbitMQ quando `amqplib` estiver instalado.
+- `ELECTION_NODE_ID`, `ELECTION_NODES_JSON`: configuracao dos nos da eleicao Bully.
 
-## 🎮 Botões
+## Endpoints importantes
 
-| Botão | Ação |
-|-------|------|
-| ✓ Presente | Marca como presente |
-| ✗ Ausente | Marca como ausente |
-| 🗑️ Remover | Remove o aluno |
-| 🗑️ Limpar Tudo | Remove todos os alunos |
+- `GET /api/health`
+- `POST /api/auth/login`
+- `GET /api/calendar?mes=YYYY-MM`
+- `POST /api/presencas/confirmacao`
+- `GET /api/presencas/monitoramento?data=YYYY-MM-DD`
+- `POST /api/presencas/efetivacao`
+- `POST /api/v1/presencas`
+- `POST /api/election/start`
+- `GET /api/election/status`
 
-## 📊 Status
+## Frontend
 
-- **Pendente** - Não confirmado (amarelo)
-- **Presente** - Confirmado como presente (verde)
-- **Ausente** - Confirmado como ausente (vermelho)
-
-## 🔍 Troubleshooting
-
-**Os dados não estão salvando?**
-- Verifique se localStorage está habilitado no navegador
-- Tente em modo não-privado
-
-**Como limpar os dados?**
-- Clique em "Limpar Tudo" ou
-- Abra DevTools → Application → LocalStorage → Delete
-
----
-
-**Versão: 1.0 - Básica com localStorage**
-
-Próximas versões integrarão PostgreSQL e Node.js
-
+As telas podem ser abertas diretamente pelo navegador a partir da pasta `frontend/`, ou servidas por qualquer servidor estatico.
