@@ -2,11 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { pool, testConnection, databaseConfig } = require('./src/config/database');
+const { authenticateCredentials, authenticateRequest, createToken, requireRole } = require('./src/auth/token-auth');
+const { BullyElection } = require('./src/election/bully-election');
+const { EventBus, ROUTING_KEYS } = require('./src/messaging/event-bus');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const CALENDAR_TABLE = 'calendario_2026';
 const DEFAULT_CONFIRMATION_RADIUS_METERS = 100;
+const eventBus = new EventBus();
+const bullyElection = new BullyElection();
 
 // Middleware
 app.use(cors());
@@ -28,6 +33,92 @@ async function ensurePresenceTable() {
     `);
 
     await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "TipoDeslocamento" VARCHAR(30)');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "Id" SERIAL');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "AlunoId" INTEGER');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "CursoId" INTEGER');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "StatusPresenca" VARCHAR(40)');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "MotivoFalta" TEXT');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "Justificativa" TEXT');
+    await pool.query('ALTER TABLE "Confirmacao_Presenca_Diaria" ADD COLUMN IF NOT EXISTS "Justificado" BOOLEAN DEFAULT false');
+}
+
+async function ensureIntegrationTables() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS "Alunos_Snapshot" (
+            "Matricula" VARCHAR(80) PRIMARY KEY,
+            "Nome" VARCHAR(255) NOT NULL,
+            "Email" VARCHAR(255),
+            "Telefone" VARCHAR(80),
+            "RotaTransporte" VARCHAR(255),
+            "Payload" JSONB,
+            "AtualizadoEm" TIMESTAMP DEFAULT NOW()
+        )
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS "Eventos_Integracao" (
+            "Id" SERIAL PRIMARY KEY,
+            "Tipo" VARCHAR(120) NOT NULL,
+            "Payload" JSONB NOT NULL,
+            "CriadoEm" TIMESTAMP DEFAULT NOW()
+        )
+    `);
+}
+
+async function saveIntegrationEvent(tipo, payload) {
+    await pool.query(
+        'INSERT INTO "Eventos_Integracao" ("Tipo", "Payload") VALUES ($1, $2)',
+        [tipo, JSON.stringify(payload)]
+    );
+}
+
+async function upsertStudentSnapshot(aluno) {
+    const matricula = aluno.matricula || aluno.Matricula || aluno.id || aluno.Id;
+    const nome = aluno.nome || aluno.Nome;
+
+    if (!matricula || !nome) {
+        throw new Error('Evento de aluno sem matricula/id ou nome');
+    }
+
+    await pool.query(
+        `
+            INSERT INTO "Alunos_Snapshot"
+            ("Matricula", "Nome", "Email", "Telefone", "RotaTransporte", "Payload", "AtualizadoEm")
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT ("Matricula") DO UPDATE SET
+                "Nome" = EXCLUDED."Nome",
+                "Email" = EXCLUDED."Email",
+                "Telefone" = EXCLUDED."Telefone",
+                "RotaTransporte" = EXCLUDED."RotaTransporte",
+                "Payload" = EXCLUDED."Payload",
+                "AtualizadoEm" = NOW()
+        `,
+        [
+            String(matricula),
+            nome,
+            aluno.email || aluno.Email || null,
+            aluno.telefone || aluno.Telefone || null,
+            aluno.rotaTransporte || aluno.RotaTransporte || null,
+            JSON.stringify(aluno)
+        ]
+    );
+}
+
+async function consumeStudentEvent(tipo, aluno) {
+    await upsertStudentSnapshot(aluno);
+    await saveIntegrationEvent(tipo, aluno);
+}
+
+async function configureMessaging() {
+    await eventBus.connect();
+    await eventBus.consume(ROUTING_KEYS.alunoCadastrado, (aluno) => consumeStudentEvent(ROUTING_KEYS.alunoCadastrado, aluno));
+    await eventBus.consume(ROUTING_KEYS.alunoAtualizado, (aluno) => consumeStudentEvent(ROUTING_KEYS.alunoAtualizado, aluno));
+}
+
+async function publishPresenceRegisteredEvent(presenca) {
+    const event = await eventBus.publishPresenceRegistered(presenca);
+    await saveIntegrationEvent(ROUTING_KEYS.presencaRegistrada, event);
+    return event;
 }
 
 function parseCoordinatePair(value) {
@@ -92,6 +183,106 @@ function getDemoVanLocation() {
     };
 }
 
+function normalizeStatus(status, fallback = 'PRESENTE') {
+    const validStatuses = [
+        'PRESENTE',
+        'AUSENTE',
+        'ATRASADO',
+        'FALTA_JUSTIFICADA',
+        'FALTA_NAO_JUSTIFICADA',
+        'SAIDA_ANTECIPADA',
+        'PRESENCA_EFETIVADA'
+    ];
+
+    const normalized = String(status || fallback).toUpperCase();
+    if (!validStatuses.includes(normalized)) {
+        throw new Error(`Status invalido. Validos: ${validStatuses.join(', ')}`);
+    }
+
+    return normalized;
+}
+
+function toPresenceDto(row) {
+    return {
+        id: row.Id,
+        alunoId: row.AlunoId,
+        alunoNome: row.NomeAluno,
+        cursoId: row.CursoId,
+        dataPresenca: row.DataCalendar,
+        status: row.StatusPresenca || (row.Confirmacao ? 'PRESENTE' : 'AUSENTE'),
+        horaEntrada: row.DataHoraPreConfirmacao,
+        horaSaida: row.DataHoraConfEfetiva,
+        motivoFalta: row.MotivoFalta,
+        justificativa: row.Justificativa,
+        justificado: row.Justificado,
+        localEmbarque: row.LocalEmbarque,
+        tipoDeslocamento: row.TipoDeslocamento,
+        alunoConfirmouEfetivacao: row.AlunoConfirmouEfetivacao
+    };
+}
+
+async function upsertPresenceV1({ alunoId, cursoId, data, status, motivoFalta = null, justificado = false }) {
+    const statusPresenca = normalizeStatus(status);
+    const existing = await pool.query(
+        `
+            SELECT "Id"
+            FROM "Confirmacao_Presenca_Diaria"
+            WHERE "AlunoId" = $1 AND "CursoId" = $2 AND "DataCalendar" = $3
+            ORDER BY "DataHoraPreConfirmacao" DESC NULLS LAST
+            LIMIT 1
+        `,
+        [alunoId, cursoId, data]
+    );
+
+    const params = [
+        alunoId,
+        cursoId,
+        `Aluno ${alunoId}`,
+        data,
+        ['PRESENTE', 'ATRASADO', 'SAIDA_ANTECIPADA'].includes(statusPresenca),
+        statusPresenca,
+        motivoFalta,
+        justificado,
+        existing.rows[0]?.Id
+    ];
+
+    const query = existing.rows.length > 0
+        ? `
+            UPDATE "Confirmacao_Presenca_Diaria"
+            SET "Confirmacao" = $5,
+                "StatusPresenca" = $6,
+                "MotivoFalta" = $7,
+                "Justificado" = $8,
+                "DataHoraPreConfirmacao" = COALESCE("DataHoraPreConfirmacao", NOW())
+            WHERE "Id" = $9
+            RETURNING *
+        `
+        : `
+            INSERT INTO "Confirmacao_Presenca_Diaria"
+            ("AlunoId", "CursoId", "NomeAluno", "DataCalendar", "Confirmacao", "DataHoraPreConfirmacao",
+             "StatusPresenca", "MotivoFalta", "Justificado")
+            VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8)
+            RETURNING *
+        `;
+
+    const result = await pool.query(query, params);
+    return toPresenceDto(result.rows[0]);
+}
+
+async function confirmarPresencaV1(req, res) {
+    try {
+        const { alunoId, cursoId } = req.params;
+        const data = req.query.data || req.body.data || formatDateKey();
+        const status = req.query.status || req.body.status || 'PRESENTE';
+        const presenca = await upsertPresenceV1({ alunoId, cursoId, data, status });
+
+        await publishPresenceRegisteredEvent(presenca);
+        res.status(201).json(presenca);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+}
+
 // ==================== ROTAS ====================
 
 // GET / - Health Check
@@ -111,6 +302,111 @@ app.get('/api/health', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ status: 'ERROR', error: error.message });
+    }
+});
+
+// ==================== AUTENTICACAO ====================
+
+// POST /api/auth/login
+// Body: { username, password }
+app.post('/api/auth/login', (req, res) => {
+    const { username, password } = req.body;
+    const user = authenticateCredentials(username, password);
+
+    if (!user) {
+        return res.status(401).json({ error: 'Credenciais invalidas' });
+    }
+
+    return res.json({
+        token: createToken(user),
+        user
+    });
+});
+
+// GET /api/auth/me
+app.get('/api/auth/me', authenticateRequest, (req, res) => {
+    res.json({ user: req.user });
+});
+
+// ==================== ELEICAO BULLY ====================
+
+app.get('/api/election/status', (req, res) => {
+    res.json(bullyElection.status());
+});
+
+app.post('/api/election/start', authenticateRequest, requireRole('ADMIN'), async (req, res) => {
+    try {
+        res.json(await bullyElection.startElection());
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/election/election', async (req, res) => {
+    try {
+        const { nodeId } = req.body;
+        res.json(await bullyElection.receiveElection(Number(nodeId)));
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/election/leader', async (req, res) => {
+    try {
+        res.json(bullyElection.setLeader(req.body.leaderId));
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/election/leader', async (req, res) => {
+    try {
+        res.json(await bullyElection.discoverLeader());
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/election/ping', (req, res) => {
+    res.json({ ok: true, nodeId: bullyElection.nodeId });
+});
+
+app.post('/api/election/monitor', authenticateRequest, requireRole('ADMIN'), async (req, res) => {
+    try {
+        res.json(await bullyElection.monitorLeader());
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ==================== MENSAGERIA / EVENTOS ====================
+
+app.post('/api/events/alunos/cadastrado', authenticateRequest, requireRole('ADMIN'), async (req, res) => {
+    try {
+        const event = await eventBus.publishStudentRegistered(req.body);
+        res.status(202).json(event);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/events/alunos/atualizado', authenticateRequest, requireRole('ADMIN'), async (req, res) => {
+    try {
+        const event = await eventBus.publishStudentUpdated(req.body);
+        res.status(202).json(event);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/events/integracao', authenticateRequest, requireRole('ADMIN'), async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT "Id", "Tipo", "Payload", "CriadoEm" FROM "Eventos_Integracao" ORDER BY "CriadoEm" DESC LIMIT 100'
+        );
+        res.json(result.rows);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 
@@ -207,6 +503,215 @@ app.post('/api/calendar', (req, res) => {
     res.status(405).json({ error: 'O calendario universal e somente leitura.' });
 });
 
+// ==================== PRESENCA V1 ====================
+
+app.post('/api/v1/presencas', async (req, res) => {
+    try {
+        const { alunoId, alunoNome, cursoId, dataPresenca, status, localEmbarque, tipoDeslocamento, motivoFalta, justificativa } = req.body;
+
+        if (!alunoId || !cursoId || !dataPresenca) {
+            return res.status(400).json({ error: 'Campos obrigatorios: alunoId, cursoId, dataPresenca' });
+        }
+
+        const statusPresenca = normalizeStatus(status);
+        const existing = await pool.query(
+            'SELECT "Id" FROM "Confirmacao_Presenca_Diaria" WHERE "AlunoId" = $1 AND "CursoId" = $2 AND "DataCalendar" = $3 LIMIT 1',
+            [alunoId, cursoId, dataPresenca]
+        );
+
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'Ja existe registro de presenca para este aluno nesta data e curso' });
+        }
+
+        const result = await pool.query(
+            `
+                INSERT INTO "Confirmacao_Presenca_Diaria"
+                ("AlunoId", "CursoId", "NomeAluno", "DataCalendar", "Confirmacao", "DataHoraPreConfirmacao",
+                 "LocalEmbarque", "TipoDeslocamento", "StatusPresenca", "MotivoFalta", "Justificativa", "Justificado")
+                VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, $8, $9, $10, $11)
+                RETURNING *
+            `,
+            [
+                alunoId,
+                cursoId,
+                alunoNome || `Aluno ${alunoId}`,
+                dataPresenca,
+                ['PRESENTE', 'ATRASADO', 'SAIDA_ANTECIPADA'].includes(statusPresenca),
+                localEmbarque || '',
+                tipoDeslocamento || null,
+                statusPresenca,
+                motivoFalta || null,
+                justificativa || null,
+                statusPresenca === 'FALTA_JUSTIFICADA'
+            ]
+        );
+
+        const presenca = toPresenceDto(result.rows[0]);
+        await publishPresenceRegisteredEvent(presenca);
+        res.status(201).json(presenca);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.post('/api/v1/presencas/aluno/:alunoId/curso/:cursoId/confirmar-hoje', async (req, res) => {
+    req.query.data = formatDateKey();
+    return confirmarPresencaV1(req, res);
+});
+
+app.post('/api/v1/presencas/aluno/:alunoId/curso/:cursoId/confirmar', confirmarPresencaV1);
+
+app.post('/api/v1/presencas/aluno/:alunoId/curso/:cursoId/ausencia', async (req, res) => {
+    try {
+        const { alunoId, cursoId } = req.params;
+        const data = req.query.data || req.body.data;
+        const motivo = req.query.motivo || req.body.motivo || null;
+        const justificado = String(req.query.justificado || req.body.justificado || 'false') === 'true';
+
+        if (!data) {
+            return res.status(400).json({ error: 'Parametro data e obrigatorio (YYYY-MM-DD)' });
+        }
+
+        const presenca = await upsertPresenceV1({
+            alunoId,
+            cursoId,
+            data,
+            status: justificado ? 'FALTA_JUSTIFICADA' : 'FALTA_NAO_JUSTIFICADA',
+            motivoFalta: motivo,
+            justificado
+        });
+
+        await publishPresenceRegisteredEvent(presenca);
+        res.status(201).json(presenca);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.put('/api/v1/presencas/:id/justificar', async (req, res) => {
+    try {
+        const justificativa = req.query.justificativa || req.body.justificativa;
+
+        if (!justificativa) {
+            return res.status(400).json({ error: 'Justificativa e obrigatoria' });
+        }
+
+        const result = await pool.query(
+            `
+                UPDATE "Confirmacao_Presenca_Diaria"
+                SET "Justificativa" = $1, "Justificado" = true, "StatusPresenca" = 'FALTA_JUSTIFICADA'
+                WHERE "Id" = $2
+                RETURNING *
+            `,
+            [justificativa, req.params.id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Registro de presenca nao encontrado' });
+        }
+
+        const presenca = toPresenceDto(result.rows[0]);
+        await publishPresenceRegisteredEvent(presenca);
+        res.json(presenca);
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+app.get('/api/v1/presencas/:id', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM "Confirmacao_Presenca_Diaria" WHERE "Id" = $1', [req.params.id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Registro de presenca nao encontrado' });
+        }
+
+        res.json(toPresenceDto(result.rows[0]));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/v1/presencas/aluno/:alunoId/periodo', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM "Confirmacao_Presenca_Diaria" WHERE "AlunoId" = $1 AND "DataCalendar" BETWEEN $2 AND $3 ORDER BY "DataCalendar" ASC',
+            [req.params.alunoId, req.query.dataInicio, req.query.dataFim]
+        );
+        res.json(result.rows.map(toPresenceDto));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/v1/presencas/curso/:cursoId/periodo', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM "Confirmacao_Presenca_Diaria" WHERE "CursoId" = $1 AND "DataCalendar" BETWEEN $2 AND $3 ORDER BY "DataCalendar" ASC',
+            [req.params.cursoId, req.query.dataInicio, req.query.dataFim]
+        );
+        res.json(result.rows.map(toPresenceDto));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/v1/presencas/relatorio/aluno/:alunoId/curso/:cursoId', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM "Confirmacao_Presenca_Diaria" WHERE "AlunoId" = $1 AND "CursoId" = $2 AND "DataCalendar" BETWEEN $3 AND $4',
+            [req.params.alunoId, req.params.cursoId, req.query.dataInicio, req.query.dataFim]
+        );
+        const presencas = result.rows.map(toPresenceDto);
+        const count = (status) => presencas.filter((presenca) => presenca.status === status).length;
+        const totalAulas = presencas.length;
+        const presentes = count('PRESENTE');
+        const atrasados = count('ATRASADO');
+        const faltasJustificadas = count('FALTA_JUSTIFICADA');
+        const frequencia = totalAulas > 0 ? ((presentes + atrasados + faltasJustificadas) * 100) / totalAulas : 0;
+
+        res.json({
+            alunoId: Number(req.params.alunoId),
+            cursoId: Number(req.params.cursoId),
+            totalAulas,
+            presentes,
+            ausentes: count('AUSENTE'),
+            atrasados,
+            faltasJustificadas,
+            faltasNaoJustificadas: count('FALTA_NAO_JUSTIFICADA'),
+            saidasAntecipadas: count('SAIDA_ANTECIPADA'),
+            frequencia: Number(frequencia.toFixed(2)),
+            statusFrequencia: frequencia >= 75 ? 'OK' : frequencia >= 50 ? 'AVISO' : 'CRITICO'
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/v1/presencas/aluno/:alunoId/faltas-nao-justificadas', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT * FROM "Confirmacao_Presenca_Diaria" WHERE "AlunoId" = $1 AND "StatusPresenca" = $2 ORDER BY "DataCalendar" DESC',
+            [req.params.alunoId, 'FALTA_NAO_JUSTIFICADA']
+        );
+        res.json(result.rows.map(toPresenceDto));
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.get('/api/v1/presencas/aluno/:alunoId/contar-faltas', async (req, res) => {
+    try {
+        const result = await pool.query(
+            'SELECT COUNT(*)::int AS total FROM "Confirmacao_Presenca_Diaria" WHERE "AlunoId" = $1 AND "StatusPresenca" = $2 AND "DataCalendar" BETWEEN $3 AND $4',
+            [req.params.alunoId, 'FALTA_NAO_JUSTIFICADA', req.query.dataInicio, req.query.dataFim]
+        );
+        res.json(result.rows[0].total);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // ==================== CONFIRMAÇÃO DE PRESENÇA ====================
 
@@ -254,6 +759,12 @@ app.post('/api/presencas/confirmacao', async (req, res) => {
             `,
             [nomeAluno.trim(), '', dataConfirmacao, coordenadasEmbarque, tipoDeslocamento]
         );
+
+        await publishPresenceRegisteredEvent({
+            nomeAluno: result.rows[0].NomeAluno,
+            dataCalendar: result.rows[0].DataCalendar,
+            status: 'PRESENTE'
+        });
 
         return res.status(201).json({
             message: 'Presença confirmada com sucesso',
@@ -424,6 +935,12 @@ app.post('/api/presencas/efetivacao', async (req, res) => {
             [preConfirmation.ctid]
         );
 
+        await publishPresenceRegisteredEvent({
+            nomeAluno: updateResult.rows[0].NomeAluno,
+            dataCalendar: updateResult.rows[0].DataCalendar,
+            status: 'PRESENCA_EFETIVADA'
+        });
+
         return res.status(200).json({
             efetivada: true,
             message: 'Presença efetivada com sucesso.',
@@ -449,6 +966,8 @@ async function startServer() {
     try {
         await testConnection();
         await ensurePresenceTable();
+        await ensureIntegrationTables();
+        await configureMessaging();
 
         app.listen(PORT, () => {
             console.log(`
