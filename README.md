@@ -1,18 +1,45 @@
-## Getting Started
+# People Transportation
 
-Welcome to the VS Code Java world. Here is a guideline to help you get started to write Java code in Visual Studio Code.
+Sistema para apoio ao transporte universitario, com frontend web, calendario academico, confirmacao de presenca, monitoramento de vans e servicos auxiliares.
 
-## Folder Structure
+## Estrutura principal
 
-The workspace contains two folders by default, where:
+- `frontend/`: telas web em HTML, CSS e JavaScript.
+- `backend-calendar/`: API Node.js/Express para calendario, presenca, monitoramento, autenticacao simples, mensageria e eleicao Bully via HTTP.
+- `database/`: scripts SQL para o banco PostgreSQL usado pelo backend Node.
+- `Presenca/`: servico Java/Spring de presenca preservado da branch principal.
+- `RegisterAdm/`: servico Java/Spring de cadastro administrativo.
+- `ElectionNode/`: servico .NET com algoritmo Bully e otimizacao de rotas.
+- `Relatorio/`: servico .NET para relatorios.
 
-- `src`: the folder to maintain sources
-- `lib`: the folder to maintain dependencies
+## Backend Node
 
-Meanwhile, the compiled output files will be generated in the `bin` folder by default.
+```bash
+cd backend-calendar
+npm install
+npm start
+```
 
-> If you want to customize the folder structure, open `.vscode/settings.json` and update the related settings there.
+Variaveis uteis:
 
-## Dependency Management
+- `PORT`: porta da API, por padrao `3001`.
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`: conexao PostgreSQL.
+- `AUTH_DEFAULT_USER`, `AUTH_DEFAULT_PASSWORD`, `AUTH_SECRET`: autenticacao da API.
+- `RABBITMQ_ENABLED=true`: habilita integracao RabbitMQ quando `amqplib` estiver instalado.
+- `ELECTION_NODE_ID`, `ELECTION_NODES_JSON`: configuracao dos nos da eleicao Bully.
 
-The `JAVA PROJECTS` view allows you to manage your dependencies. More details can be found [here](https://github.com/microsoft/vscode-java-dependency#manage-dependencies).
+## Endpoints importantes
+
+- `GET /api/health`
+- `POST /api/auth/login`
+- `GET /api/calendar?mes=YYYY-MM`
+- `POST /api/presencas/confirmacao`
+- `GET /api/presencas/monitoramento?data=YYYY-MM-DD`
+- `POST /api/presencas/efetivacao`
+- `POST /api/v1/presencas`
+- `POST /api/election/start`
+- `GET /api/election/status`
+
+## Frontend
+
+As telas podem ser abertas diretamente pelo navegador a partir da pasta `frontend/`, ou servidas por qualquer servidor estatico.

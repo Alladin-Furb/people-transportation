@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmação de Presença</title>
+    <link rel="stylesheet" href="navigation.css">
+    <link rel="stylesheet" href="styles.css">
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
+</head>
+<body>
+    <nav class="app-nav" aria-label="Navegacao principal">
+        <div class="app-nav__inner">
+            <div class="app-nav__brand">Sistema de Transporte</div>
+            <ul class="app-nav__menu">
+                <li><a class="app-nav__link is-active" href="index.html">Confirmacao</a></li>
+                <li><a class="app-nav__link" href="calendar.html">Calendario</a></li>
+                <li><a class="app-nav__link" href="monitoramento.html">Monitoramento</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1>🚌 Confirmação de Presença</h1>
+                <p>Transporte Universitário</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="confirmation-section">
+                <h2>Iniciar Confirmação</h2>
+                <form id="presenceForm" onsubmit="confirmPresence(event)">
+                    <div class="form-group">
+                        <label for="studentName">Nome do aluno</label>
+                        <input type="text" id="studentName" placeholder="Digite o nome completo" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmationDate">Data da confirmação</label>
+                        <input type="date" id="confirmationDate" readonly required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tripType">Tipo de deslocamento</label>
+                        <select id="tripType" required>
+                            <option value="">Selecione uma opção</option>
+                            <option value="VOU_E_VOLTO">Vou e Volto</option>
+                            <option value="APENAS_VOLTO">Apenas Volto</option>
+                            <option value="APENAS_VOU">Apenas Vou</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="boardingLocation">Local de embarque do aluno</label>
+                        <input
+                            type="text"
+                            id="boardingLocation"
+                            placeholder="Ex.: Rua XV de Novembro, 1200 - Centro"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label>Selecione a localização exata no mapa</label>
+                        <div class="search-box">
+                            <input
+                                type="text"
+                                id="addressSearch"
+                                placeholder="Pesquise um endereço..."
+                                class="search-input"
+                            >
+                            <button type="button" id="searchAddressBtn" class="btn-search">Buscar</button>
+                        </div>
+                        <div id="searchResults" class="search-results"></div>
+                        <div class="map-tools">
+                            <button type="button" id="useCurrentLocation" class="btn-map">Usar minha localização</button>
+                            <span id="coordinatesPreview" class="coordinates-preview">Nenhuma coordenada selecionada</span>
+                        </div>
+                        <div id="boardingMap" class="boarding-map"></div>
+                        <input type="hidden" id="latitude" required>
+                        <input type="hidden" id="longitude" required>
+                    </div>
+
+                    <button type="submit" class="btn-confirm">Confirmar Presença</button>
+                </form>
+
+                <p id="feedbackMessage" class="feedback-message" aria-live="polite"></p>
+            </section>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2026 Confirmação de Presença</p>
+    </footer>
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+    ></script>
+    <script src="script.js"></script>
+</body>
+</html>

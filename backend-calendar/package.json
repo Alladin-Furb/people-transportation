@@ -1,0 +1,21 @@
+{
+  "name": "people-transportation-calendar",
+  "version": "1.0.0",
+  "description": "Backend para Calendário Acadêmico",
+  "main": "calendar-server.js",
+  "scripts": {
+    "start": "node calendar-server.js",
+    "dev": "nodemon calendar-server.js",
+    "db:explore": "node explore-db.js",
+    "db:test": "node test-db-connection.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.10.0",
+    "dotenv": "^16.0.3",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
